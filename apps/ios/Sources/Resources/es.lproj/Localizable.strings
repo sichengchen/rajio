@@ -17,3 +17,5 @@
 "Unable to open library" = "No se puede abrir la biblioteca";
 "Enter a valid feed URL." = "Introduce una URL de canal válida.";
 "Playback failed. Try again." = "No se pudo reproducir. Inténtalo de nuevo.";
+"Loading audio…" = "Cargando audio…";
+"Playback position" = "Posición de reproducción";

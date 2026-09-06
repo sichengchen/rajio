@@ -17,3 +17,5 @@
 "Unable to open library" = "無法開啟資料庫";
 "Enter a valid feed URL." = "請輸入有效的訂閱來源網址。";
 "Playback failed. Try again." = "播放失敗，請再試一次。";
+"Loading audio…" = "正在載入音訊…";
+"Playback position" = "播放進度";

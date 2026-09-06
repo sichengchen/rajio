@@ -17,3 +17,5 @@
 "Unable to open library" = "Unable to open library";
 "Enter a valid feed URL." = "Enter a valid feed URL.";
 "Playback failed. Try again." = "Playback failed. Try again.";
+"Loading audio…" = "Loading audio…";
+"Playback position" = "Playback position";

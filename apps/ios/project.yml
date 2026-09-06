@@ -13,6 +13,7 @@ packages:
 settings:
   base:
     SWIFT_VERSION: '5.0'
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
     PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.ios
     MARKETING_VERSION: '0.10.1'
     CURRENT_PROJECT_VERSION: 1
@@ -25,6 +26,23 @@ targets:
     type: application
     platform: iOS
     sources: [Sources]
+    preBuildScripts:
+      - name: Build native Rust core
+        script: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          unset SDKROOT
+          bash "$SRCROOT/../../scripts/build-core-ios.sh"
+        basedOnDependencyAnalysis: true
+        inputFiles:
+          - $(SRCROOT)/../../Cargo.lock
+          - $(SRCROOT)/../../crates/rajio-core/Cargo.toml
+          - $(SRCROOT)/../../crates/rajio-core/src/lib.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/feed.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/native.rs
+          - $(SRCROOT)/../../scripts/build-core-ios.sh
+        outputFiles:
+          - $(SRCROOT)/../../target/ios-simulator/librajio_core.a
+          - $(SRCROOT)/../../target/aarch64-apple-ios/release/librajio_core.a
     dependencies:
       - package: RajioLibrary
       - package: RajioCore
