@@ -1,0 +1,41 @@
+name: Rajio
+options:
+  knownRegions: [en, zh-Hans, zh-Hant, ja, fr, es, de]
+  developmentLanguage: en
+  bundleIdPrefix: com.scchan
+  deploymentTarget:
+    iOS: '17.0'
+packages:
+  RajioLibrary:
+    path: ../../packages/ios-library
+  RajioCore:
+    path: ../../packages/core-swift
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.ios
+    MARKETING_VERSION: '0.10.1'
+    CURRENT_PROJECT_VERSION: 1
+    GENERATE_INFOPLIST_FILE: YES
+    'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]': '$(inherited) $(SRCROOT)/../../target/ios-simulator'
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]': '$(inherited) $(SRCROOT)/../../target/aarch64-apple-ios/release'
+    OTHER_LDFLAGS: '$(inherited) -lrajio_core'
+targets:
+  Rajio:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: RajioLibrary
+      - package: RajioCore
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Rajio
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIBackgroundModes: [audio]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true

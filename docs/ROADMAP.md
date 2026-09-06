@@ -119,7 +119,7 @@ When the selected device becomes unreachable, show it as unavailable and offer *
 
 ## Milestone overview
 
-Implementation has started in A. The RSS core, native Swift wrapper, TypeScript/Wasm package, and cross-runtime fixture harnesses are implemented. Library reducers, sync operation types, and persistence contracts are the next A deliverables. Production client migration remains in B. See [shared-core build and test documentation](shared-core.md).
+Implementation has started in A and B. The RSS core, native Swift wrapper, TypeScript/Wasm package, and cross-runtime fixture harnesses are implemented. The iOS SwiftUI application now integrates native parsing with GRDB subscriptions, episode browsing, streaming, and persisted progress; see [iOS development notes](../apps/ios/README.md). Library reducers, sync operation types, and persistence contracts are the next A deliverables. Desktop production migration and the remaining independent-client work continue in B. See [shared-core build and test documentation](shared-core.md).
 
 | Milestone | Outcome | Main dependencies |
 | --- | --- | --- |
@@ -180,7 +180,7 @@ Select Swift binding tooling, Wasm packaging, and persistence schema/migration o
 - Automatically refresh subscriptions on appropriate lifecycle events and background opportunities.
 - Use cache validation, bounded concurrency, retry/backoff, and visible refresh status.
 - Hide the sidebar refresh button while retaining an accessible manual refresh action elsewhere.
-- Keep the back action visible while scrolling; transition the page heading and back action into a persistent top bar.
+- Keep only the back action visible while scrolling, labeled with the originating page title.
 - Bring settings and onboarding into the shared design system, including loading, empty, error, focus, and disabled states.
 - Deliver all seven supported languages across core screens, settings, onboarding, menus, errors, and status messages.
 - Address download failures, missing files, recovery, storage limits, and cleanup behavior.

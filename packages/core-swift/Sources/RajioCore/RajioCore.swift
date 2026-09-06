@@ -1,7 +1,7 @@
 import CRajioCore
 import Foundation
 
-public struct Podcast: Codable, Equatable {
+public struct Podcast: Codable, Equatable, Sendable {
     public let id: String
     public let feedUrl: String
     public let title: String
@@ -9,11 +9,11 @@ public struct Podcast: Codable, Equatable {
     public let description: String
     public let imageUrl: String?
     public let language: String?
-    public let subscriptionDate: String
+    public var subscriptionDate: String
     public let lastUpdated: String
 }
 
-public struct Episode: Codable, Equatable {
+public struct Episode: Codable, Equatable, Sendable {
     public let id: String
     public let podcastId: String
     public let guid: String?
@@ -26,7 +26,7 @@ public struct Episode: Codable, Equatable {
     public let duration: Double?
 }
 
-public struct ParsedFeed: Codable, Equatable {
+public struct ParsedFeed: Codable, Equatable, Sendable {
     public let podcast: Podcast
     public let episodes: [Episode]
 }

@@ -1,0 +1,22 @@
+name: iOS client
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.96.0
+      - run: brew install xcodegen
+      - run: cargo build --locked -p rajio-core
+      - run: swift test --package-path packages/ios-library --scratch-path target/ios-library -Xlinker -L -Xlinker "$PWD/target/debug"
+      - run: bash scripts/build-core-ios.sh
+      - run: xcodegen generate --spec apps/ios/project.yml
+      - run: xcodebuild -project apps/ios/Rajio.xcodeproj -scheme Rajio -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath target/ios CODE_SIGNING_ALLOWED=NO build
