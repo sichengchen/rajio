@@ -17,3 +17,5 @@
 "Unable to open library" = "无法打开资料库";
 "Enter a valid feed URL." = "请输入有效的订阅源网址。";
 "Playback failed. Try again." = "播放失败，请重试。";
+"Loading audio…" = "正在加载音频…";
+"Playback position" = "播放进度";

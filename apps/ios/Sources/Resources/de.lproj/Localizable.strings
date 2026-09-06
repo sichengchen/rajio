@@ -17,3 +17,5 @@
 "Unable to open library" = "Mediathek kann nicht geöffnet werden";
 "Enter a valid feed URL." = "Gib eine gültige Feed-URL ein.";
 "Playback failed. Try again." = "Wiedergabe fehlgeschlagen. Versuche es erneut.";
+"Loading audio…" = "Audio wird geladen…";
+"Playback position" = "Wiedergabeposition";

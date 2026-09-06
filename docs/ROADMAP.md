@@ -185,6 +185,22 @@ Select Swift binding tooling, Wasm packaging, and persistence schema/migration o
 - Deliver all seven supported languages across core screens, settings, onboarding, menus, errors, and status messages.
 - Address download failures, missing files, recovery, storage limits, and cleanup behavior.
 
+### iOS delivery plan
+
+The existing iOS code is an integration scaffold. B is complete only when the following user journeys work in the installed app. SwiftUI views, native Rust domain behavior, GRDB migrations, and XcodeGen configuration ship together in each delivery step.
+
+| Step | Product experience | Technical delivery | Verification |
+| --- | --- | --- | --- |
+| B1 — Reliable app foundation | Launch, add a feed, recover from a failed request, browse episodes, play/pause/seek, and return after restart | App-owned library/player state; cancellable feed loading; explicit loading/error/retry states; item-ready playback transitions; persisted current selection and progress | Clean-install and upgrade runs in Simulator; real RSS/media endpoints and deterministic failure fixtures; rapid play/pause and episode-switch tests |
+| B2 — Library and discovery | Library, show details, episode details and linked show notes; catalog search; RSS entry; OPML import/export; favorites and queue | SwiftUI navigation and reusable components; Rust parsing/identity/library reducers; GRDB adapters; direct catalog and feed transport | Search → subscribe → episode → back; duplicate subscription/import; large libraries; accessible names and focus; compare outcomes with desktop fixtures |
+| B3 — Downloads and offline listening | Download status, cancel/retry, downloaded-library browsing, deletion and storage management; play with networking disabled | Background URLSession downloads; durable task/file reconciliation; local-media preference; recover interrupted and missing downloads | Restart during download; cancel/retry; missing file; storage failure; airplane-mode launch, seek and saved progress |
+| B4 — Playback and system integration | Full player with progress and duration, queue, lock-screen controls, background listening, interruption and route recovery | AVPlayer state observation; AVAudioSession intent handling; MediaPlayer metadata/commands; atomic session checkpoints/outbox; restore selected episode paused | Simulator regression suite plus physical iPhone checks for calls/Siri, headphones/Bluetooth, lock screen, backgrounding, and relaunch |
+| B5 — Refresh and lifecycle | Automatic refresh with visible status and a manual action; cached content remains usable | Conditional HTTP requests, bounded concurrency, retry/backoff; foreground lifecycle refresh and BGAppRefreshTask; GRDB transactions | Offline launch, timeout, HTTP error, 304 response, cancellation, mixed-success refresh, and repeated foreground/background transitions |
+| B6 — Settings, localization and accessibility | Settings, onboarding, appearance and language selection; seven complete locales | String catalogs/resources, localized errors and formatting, Dynamic Type, VoiceOver, reusable native controls | Each locale on iPhone/iPad, large text, light/dark mode, keyboard and VoiceOver; changing language updates every screen |
+| B7 — Independent-client acceptance | Complete daily listening without a Rajio account or server; compatible local behavior on desktop and iOS | Shared reducer/adapter fixtures, migration and recovery tests; reproducible XcodeGen builds and CI simulator tests | Subscribe → refresh → download → offline play → pause → restart → resume; preserve existing desktop data; record exact device/OS/build and results |
+
+B1 is in progress. The scaffold contains native parsing, GRDB records/outbox writes, feed entry, episode lists, and basic audio execution. This is not completion of independent iOS listening. Subsequent steps depend on B1; B2/B3 and B5 can then proceed independently, and B7 validates the assembled client. Physical-device playback checks remain separate from simulator verification.
+
 ### Completion criteria
 
 - Both clients use the shared Rust implementation for RSS parsing, episode identity, and library rules.
