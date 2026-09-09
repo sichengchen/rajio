@@ -1,6 +1,6 @@
 import { t } from "../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { useRef } from "react";
 import { Radio, Plus, Import } from "lucide-react";
@@ -39,7 +39,9 @@ export function WelcomeScreen() {
     } catch (error) {
       console.error("OPML import error:", error);
       toast.error(
-        t("Failed to import OPML file: {error}", { error: error instanceof Error ? error.message : t("Unknown error") }),
+        t("Failed to import OPML file: {error}", {
+          error: error instanceof Error ? error.message : t("Unknown error"),
+        }),
       );
     }
 
@@ -50,22 +52,30 @@ export function WelcomeScreen() {
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-12rem)] items-center justify-center px-2 py-10">
+    <div className="flex items-center justify-center">
       <section className="flex w-full max-w-sm flex-col gap-6" aria-labelledby="welcome-title">
         <header className="flex flex-col items-center gap-4 text-center">
           <div className="flex size-14 items-center justify-center rounded-xl bg-muted">
             <Radio className="size-7 text-foreground" />
           </div>
-          <h1 id="welcome-title" className="text-2xl font-semibold tracking-tight">{t("Welcome to Rajio")}</h1>
+          <h1 id="welcome-title" className="text-2xl font-semibold tracking-tight">
+            {t("Welcome to Rajio")}
+          </h1>
         </header>
         <div className="flex flex-col gap-4 text-center">
-          <p className="text-muted-foreground text-sm">{t("Rajio is a podcast player. Get started by adding your first podcast.")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("Rajio is a podcast player. Get started by adding your first podcast.")}
+          </p>
 
           <div className="flex flex-col gap-2">
             <Button className="w-full" size="default" onClick={() => setShowAddPodcastDialog(true)}>
-              <Plus data-icon="inline-start" />{t("Add Podcast")}</Button>
+              <Plus data-icon="inline-start" />
+              {t("Add Podcast")}
+            </Button>
 
-            <p className="text-sm text-muted-foreground mt-2">{t("Or import your subscriptions from an OPML file")}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {t("Or import your subscriptions from an OPML file")}
+            </p>
           </div>
 
           <div className="flex flex-col gap-2">

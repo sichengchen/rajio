@@ -74,7 +74,11 @@ export function PodcastRoutePage({ podcastId }: { podcastId: string }) {
 
   return (
     <RequireSubscriptions>
-      <AppPageLayout backTo="/library" title={isMobile ? podcast?.title : undefined}>
+      <AppPageLayout
+        centered={!podcast}
+        backTo="/library"
+        title={isMobile ? podcast?.title : undefined}
+      >
         {podcast ? (
           <div className="mx-auto max-w-4xl">
             <PodcastDetails

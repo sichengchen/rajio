@@ -23,6 +23,7 @@ interface ToolbarAction {
 interface AppPageLayoutProps {
   backTo?: "/downloaded" | "/favorites" | "/library" | "/search" | "/settings" | "/whats-new";
   children: ReactNode;
+  centered?: boolean;
   title?: string;
   toolBar?: ToolbarAction[];
 }
@@ -72,22 +73,24 @@ function getActiveTab(pathname: string) {
   return "whats-new";
 }
 
-export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayoutProps) {
+export function AppPageLayout({ backTo, children, title, toolBar, centered }: AppPageLayoutProps) {
   useLocale();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
-  const [scrolled,setScrolled]=useState(false);
-  useEffect(()=>setScrolled(false),[location.pathname]);
-  const playbackState = usePodcastStore((state) => state.playbackState);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => setScrolled(false), [location.pathname]);
+  const hasActiveEpisode = usePodcastStore((state) => !!state.playbackState.currentEpisode);
   const showAddPodcastDialog = usePodcastStore((state) => state.showAddPodcastDialog);
   const setShowAddPodcastDialog = usePodcastStore((state) => state.setShowAddPodcastDialog);
 
-  const hasActiveEpisode = !!playbackState.currentEpisode;
   const pageContent = (
     <div className="app-drag mx-auto max-w-6xl px-4 py-3">
       {title ? (
-        <div data-page-header className={`sticky top-0 z-30 -mx-4 mt-6 flex items-center gap-3 border-b ${scrolled ? "border-border/60" : "border-transparent"} bg-background/95 px-6 py-3 backdrop-blur-sm`}>
+        <div
+          data-page-header
+          className={`sticky top-0 z-30 -mx-4 mt-6 flex items-center gap-3 border-b ${scrolled ? "border-border/60" : "border-transparent"} bg-background/95 px-6 py-3 backdrop-blur-sm`}
+        >
           {isMobile && backTo ? (
             <BackNavigation
               className="-ml-2"
@@ -124,8 +127,31 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col" onScrollCapture={event => { const target=event.target as HTMLElement; if(target.matches("[data-page-scroll], [data-slot=desktop-safe-scroll-viewport]")) setScrolled(target.scrollTop>0); }}>
-        {isMobile ? (
+      <div
+        className="flex h-full min-h-0 flex-col"
+        onScrollCapture={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.matches("[data-page-scroll], [data-slot=desktop-safe-scroll-viewport]"))
+            setScrolled(target.scrollTop > 0);
+        }}
+      >
+        {centered ? (
+          <div
+            data-page-scroll
+            className="flex min-h-0 flex-1 overflow-y-auto p-6"
+            style={
+              isMobile
+                ? {
+                    paddingBottom: hasActiveEpisode
+                      ? "calc(10rem + env(safe-area-inset-bottom))"
+                      : "calc(4rem + env(safe-area-inset-bottom))",
+                  }
+                : undefined
+            }
+          >
+            <div className="m-auto w-full">{children}</div>
+          </div>
+        ) : isMobile ? (
           <div
             data-page-scroll
             className="flex-1 overflow-y-auto"
@@ -179,7 +205,7 @@ export function RequireSubscriptions({ children }: { children: ReactNode }) {
 
   if (podcasts.length === 0) {
     return (
-      <AppPageLayout>
+      <AppPageLayout centered>
         <WelcomeScreen />
       </AppPageLayout>
     );
