@@ -15,3 +15,7 @@ xcrun actool "$icon_source" --compile "$icon_output" --platform macosx \
   --output-partial-info-plist "$icon_output/info.plist"
 cp "$icon_output/Assets.car" "$resources/Assets.car"
 cp "$icon_output/Rajio.icns" "$resources/Rajio.icns"
+
+# actool adds the macOS safe-area inset; the Composer PNG export is full bleed.
+# Use the compiled macOS rendition for Electron development Dock icons.
+sips -s format png "$icon_output/Rajio.icns" --out "$resources/icon-macos.png" >/dev/null

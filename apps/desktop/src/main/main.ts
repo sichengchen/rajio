@@ -26,9 +26,10 @@ const mainDir =
 const appId = "com.scchan.rajio";
 const legacyUserDataPath = path.join(app.getPath("appData"), "Newcastle");
 const rendererDevServerUrl = process.env.NEWCASTLE_RENDERER_URL;
+const appIconFilename = process.platform === "darwin" ? "icon-macos.png" : "icon.png";
 const appIconPath = app.isPackaged
-  ? path.join(process.resourcesPath, "icon.png")
-  : path.resolve(mainDir, "../../resources/icon.png");
+  ? path.join(process.resourcesPath, appIconFilename)
+  : path.resolve(mainDir, "../../resources", appIconFilename);
 const appIcon = nativeImage.createFromPath(appIconPath);
 const startupEpisodeArtworkLimit = 24;
 const startupArtworkWaitMs = 3_000;

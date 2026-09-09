@@ -33,6 +33,10 @@
       {
         "from": "resources/Assets.car",
         "to": "Assets.car"
+      },
+      {
+        "from": "resources/icon-macos.png",
+        "to": "icon-macos.png"
       }
     ],
     "files": [
