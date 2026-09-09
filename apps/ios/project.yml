@@ -61,6 +61,7 @@ targets:
         UIBackgroundModes: [audio, fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.scchan.rajio.refresh]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
 

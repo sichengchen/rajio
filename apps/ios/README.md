@@ -4,7 +4,7 @@ SwiftUI application using native `RajioCore` RSS parsing and `RajioLibrary` GRDB
 
 ## Development
 
-Install Xcode, Rust, and XcodeGen (`brew install xcodegen`). Select Xcode with `xcode-select` or set `DEVELOPER_DIR` to its `Contents/Developer` directory.
+Install Xcode 26.3 or newer, Rust 1.96.0, and XcodeGen (`brew install xcodegen`). The app supports iOS 17 and newer; native Liquid Glass controls use iOS 26 APIs, and the tab accessory uses iOS 26.1 APIs. Select Xcode with `xcode-select` or set `DEVELOPER_DIR` to its `Contents/Developer` directory.
 
 From the repository root:
 
@@ -24,17 +24,35 @@ xcodebuild -project apps/ios/Rajio.xcodeproj -scheme Rajio \
   -derivedDataPath target/ios CODE_SIGNING_ALLOWED=NO build
 ```
 
-## Implemented
+## Client capabilities
 
-- Add a publisher RSS URL, browse the persisted library and episodes, pull to refresh, and unsubscribe.
-- Parse feeds through the native Rust core. The GRDB adapter stores the core's serialized records and preserves subscription dates and progress on refresh.
-- Atomically save subscription/progress changes and pending local operations; test rollback through an injected outbox failure.
-- Stream through AVPlayer, pause/resume, skip, persist checkpoints, and restore the selected episode paused after restart, then resume from its saved position.
-- Configure background audio and lock-screen play/pause/skip commands. Handle audio interruptions and disconnected output routes.
-- Include system-selected English, Simplified/Traditional Chinese, Japanese, French, Spanish, and German strings for these screens.
+- Direct catalog search, RSS entry, OPML import/export, subscriptions, show and episode details, linked show notes, favorites, and an ordered queue.
+- Native Rust parsing, episode reconciliation, library reducers, and collection normalization. GRDB persists local mutations and pending operations in the same transaction.
+- Background URLSession downloads with cancel/retry, storage limits, file cleanup, and interrupted/missing-file recovery. AVPlayer prefers downloaded media.
+- Streaming, seeking, playback speed, atomic listening checkpoints, and selected-episode restoration in a paused state after relaunch.
+- Background audio, Now Playing metadata and remote commands, interruption handling, and output-route recovery.
+- Conditional feed refresh, bounded concurrency, retry/backoff, foreground refresh, and scheduled background opportunities.
+- Native SwiftUI navigation, forms, lists, sheets, player controls, and a Liquid Glass tab accessory. [Design conventions](DESIGN.md) follow Apple’s Human Interface Guidelines.
+- System and manual language selection for English, Simplified Chinese, Traditional Chinese, Japanese, French, Spanish, and German; light/dark appearance and Dynamic Type.
+- Editable Icon Composer source in `Sources/Resources/Rajio.icon`, shared with the desktop icon pipeline.
 
-## Remaining milestone B work
+Feeds and media are fetched directly, including user-entered HTTP sources. Local use requires no Rajio account or backend. Milestone C connects the local outbox to the multi-user synchronization protocol.
 
-Downloads and offline media, catalog search, OPML, automatic refresh scheduling/cache validators/backoff, in-app language selection, complete player/error states and physical-device lifecycle validation remain. Core library reducers and the durable sync operation model are also still pending; the local versioned checkpoint intent is not the milestone-C wire protocol. The GRDB schema is owned by this adapter; cross-adapter migration equivalence remains to be implemented with the shared reducers.
+## Simulator verification
 
-The transport configuration supports user-entered HTTP podcast feeds and media in addition to HTTPS. No backend proxy is involved.
+Start the deterministic RSS/media fixture server in a separate terminal:
+
+```sh
+node scripts/ios-fixture-server.mjs
+```
+
+Then run the native recovery and UI acceptance suites on a selected simulator:
+
+```sh
+xcodebuild -project apps/ios/Rajio.xcodeproj -scheme Rajio \
+  -destination 'platform=iOS Simulator,id=YOUR_SIMULATOR_UDID' \
+  -parallel-testing-enabled NO -derivedDataPath target/ios \
+  CODE_SIGNING_ALLOWED=NO test
+```
+
+Run these UI tests serially: they change the fixture server’s online/offline state. Tests use isolated libraries and cover offline listening, persisted progress, download recovery, native navigation, seven languages, manual language persistence, and dark appearance with accessibility text sizes. See the [Milestone B verification record](../../docs/milestone-b-verification.md).

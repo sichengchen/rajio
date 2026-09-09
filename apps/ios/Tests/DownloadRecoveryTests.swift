@@ -8,6 +8,10 @@ final class DownloadRecoveryTests: XCTestCase {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     let db = try LibraryDatabase(path: root.appendingPathComponent("library.sqlite").path)
+    addTeardownBlock {
+      try await db.close()
+      try FileManager.default.removeItem(at: root)
+    }
     let xml = "<rss><channel><title>Recovery</title>" + ["missing", "interrupted", "saved", "cancelled"].map {
       "<item><title>\($0)</title><guid>\($0)</guid><enclosure url=\"https://example.com/\($0).mp3\" type=\"audio/mpeg\"/></item>"
     }.joined() + "</channel></rss>"
@@ -18,8 +22,7 @@ final class DownloadRecoveryTests: XCTestCase {
   }
 
   func testMissingAndInterruptedDownloadsRecoverAfterRestart() async throws {
-    let (db, manager, root) = try await fixture()
-    defer { try? FileManager.default.removeItem(at: root) }
+    let (db, manager, _) = try await fixture()
     let ids = Dictionary(uniqueKeysWithValues: try await db.allEpisodes().map { ($0.title, $0.id) })
     try await db.saveDownload(DownloadRecord(episodeId: ids["missing"]!, status: "downloaded",
       progress: 1, fileName: "gone.mp3", bytes: 200))
@@ -37,8 +40,7 @@ final class DownloadRecoveryTests: XCTestCase {
   }
 
   func testRemovingDownloadDeletesItsFileAndRecord() async throws {
-    let (db, manager, root) = try await fixture()
-    defer { try? FileManager.default.removeItem(at: root) }
+    let (db, manager, _) = try await fixture()
     try FileManager.default.createDirectory(at: manager.folder, withIntermediateDirectories: true)
     let file = manager.folder.appendingPathComponent("saved.mp3")
     try Data([1, 2, 3]).write(to: file)
@@ -56,8 +58,7 @@ final class DownloadRecoveryTests: XCTestCase {
   }
 
   func testCancellationPersistsAcrossManagerRestart() async throws {
-    let (db, manager, root) = try await fixture()
-    defer { try? FileManager.default.removeItem(at: root) }
+    let (db, manager, _) = try await fixture()
     await manager.restore()
     let episodes = try await db.allEpisodes()
     let id = try XCTUnwrap(episodes.first { $0.title == "cancelled" }?.id)
@@ -67,4 +68,20 @@ final class DownloadRecoveryTests: XCTestCase {
     await restarted.restore()
     XCTAssertEqual(restarted.records[id]?.status, "cancelled")
   }
+  func testStorageLimitStopsDownloadBeforeStartingTransfer() async throws {
+    let (db, manager, _) = try await fixture()
+    try FileManager.default.createDirectory(at: manager.folder, withIntermediateDirectories: true)
+    try Data([1, 2, 3]).write(to: manager.folder.appendingPathComponent("saved.mp3"))
+    let episodes = try await db.allEpisodes()
+    let saved = try XCTUnwrap(episodes.first { $0.title == "saved" })
+    let requested = try XCTUnwrap(episodes.first { $0.title == "missing" })
+    try await db.saveDownload(DownloadRecord(episodeId: saved.id, status: "downloaded",
+      progress: 1, fileName: "saved.mp3", bytes: 3))
+    try await db.setPreference("downloadLimitBytes", value: "1")
+    await manager.download(requested)
+    XCTAssertNil(manager.records[requested.id])
+    XCTAssertEqual(manager.error,
+      L10n.text("Download storage limit reached. Remove downloads or increase the limit in Settings."))
+  }
+
 }

@@ -15,6 +15,7 @@ struct LibraryView: View {
   @State private var exporting = false
   @State private var fullPlayer = false
   @Environment(\.scenePhase) private var phase
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   init(database: LibraryDatabase, downloads: DownloadManager) {
     self.downloads = downloads
@@ -151,8 +152,14 @@ struct LibraryView: View {
         WelcomeView(adding: $adding).listRowSeparator(.hidden)
       } else {
         Section {
-          ShowGrid(model: model, audio: audio, podcasts: model.podcasts, onRemove: remove)
-            .listRowSeparator(.hidden)
+          if typeSize.isAccessibilitySize {
+            ForEach(model.podcasts, id: \.id) { podcast in
+              AccessibleShowRow(podcast: podcast, model: model, audio: audio, onRemove: remove)
+            }
+          } else {
+            ShowGrid(model: model, audio: audio, podcasts: model.podcasts, onRemove: remove)
+              .listRowSeparator(.hidden)
+          }
         } header: {
           Text("Recently Updated").font(.headline).foregroundStyle(.primary).textCase(nil)
         }

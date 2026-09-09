@@ -55,28 +55,61 @@ struct ShowGrid: View {
   var onRemove: ((Podcast) -> Void)?
   @Environment(\.dynamicTypeSize) private var typeSize
   var body: some View {
-    LazyVGrid(
-      columns: [
-        GridItem(.adaptive(minimum: typeSize.isAccessibilitySize ? 240 : 150), spacing: 18)
-      ], alignment: .leading, spacing: 24
-    ) {
-      ForEach(podcasts, id: \.id) { podcast in
-        NavigationLink {
-          ShowView(podcast: podcast, model: model, audio: audio)
-        } label: {
-          VStack(alignment: .leading, spacing: 8) {
-            ArtworkTile(url: podcast.imageUrl).aspectRatio(1, contentMode: .fit)
-              .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
-            Text(podcast.title).font(.subheadline.weight(.medium)).lineLimit(2)
-            if let author = podcast.author {
-              Text(author).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            }
-          }.frame(maxWidth: .infinity, alignment: .leading)
-        }.buttonStyle(.plain)
-          .contextMenu {
-            if let onRemove { Button("Unsubscribe", role: .destructive) { onRemove(podcast) } }
-          }
+    if typeSize.isAccessibilitySize {
+      LazyVStack(alignment: .leading, spacing: 20) {
+        ForEach(podcasts, id: \.id) { podcast in
+          AccessibleShowRow(podcast: podcast, model: model, audio: audio, onRemove: onRemove)
+        }
       }
+    } else {
+      LazyVGrid(
+        columns: [
+          GridItem(.adaptive(minimum: 150), spacing: 18)
+        ], alignment: .leading, spacing: 24
+      ) {
+        ForEach(podcasts, id: \.id) { podcast in
+          NavigationLink {
+            ShowView(podcast: podcast, model: model, audio: audio)
+          } label: {
+            VStack(alignment: .leading, spacing: 8) {
+              ArtworkTile(url: podcast.imageUrl).aspectRatio(1, contentMode: .fit)
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
+              Text(podcast.title).font(.subheadline.weight(.medium)).lineLimit(2)
+              if let author = podcast.author {
+                Text(author).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+              }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+          }.buttonStyle(.plain)
+            .contextMenu {
+              if let onRemove { Button("Unsubscribe", role: .destructive) { onRemove(podcast) } }
+            }
+        }
+      }
+    }
+  }
+}
+
+struct AccessibleShowRow: View {
+  let podcast: Podcast
+  @ObservedObject var model: LibraryModel
+  @ObservedObject var audio: AudioPlayer
+  var onRemove: ((Podcast) -> Void)?
+
+  var body: some View {
+    NavigationLink {
+      ShowView(podcast: podcast, model: model, audio: audio)
+    } label: {
+      HStack(alignment: .top, spacing: 16) {
+        Artwork(url: podcast.imageUrl, size: 64)
+        VStack(alignment: .leading, spacing: 8) {
+          Text(podcast.title).font(.body).foregroundStyle(.primary)
+          if let author = podcast.author {
+            Text(author).font(.subheadline).foregroundStyle(.secondary)
+          }
+        }.fixedSize(horizontal: false, vertical: true)
+      }
+    }.contextMenu {
+      if let onRemove { Button("Unsubscribe", role: .destructive) { onRemove(podcast) } }
     }
   }
 }

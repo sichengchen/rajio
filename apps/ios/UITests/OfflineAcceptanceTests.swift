@@ -89,6 +89,18 @@ final class OfflineAcceptanceTests: XCTestCase {
     capture("queue-empty")
   }
 
+  func testDarkAppearanceWithAccessibilityText() {
+    app.terminate()
+    app.launchArguments += ["-appearance", "dark", "-UIPreferredContentSizeCategoryName",
+      "UICTContentSizeCategoryAccessibilityXXXL"]
+    app.launch()
+    subscribe()
+    capture("dark-large-library")
+    app.buttons["Latest Episodes"].firstMatch.tap()
+    XCTAssertTrue(app.navigationBars["Latest Episodes"].waitForExistence(timeout: 5))
+    capture("dark-large-episodes")
+  }
+
   private func capture(_ name: String) {
     let attachment = XCTAttachment(screenshot: app.screenshot())
     attachment.name = name

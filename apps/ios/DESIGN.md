@@ -13,7 +13,7 @@ Source: [Typography](https://developer.apple.com/design/human-interface-guidelin
 - `TabView` provides Home, Library, and Search. Let the system position tabs for iPhone and iPad.
 - `NavigationStack` provides hierarchical navigation and system back controls.
 - `List`, `Section`, `Label`, and `NavigationLink` provide Library navigation, row selection, separators, and disclosure indicators.
-- Artwork collections use an adaptive grid; episode lists keep titles and summaries concise and open full details on selection.
+- Artwork collections use an adaptive grid at standard text sizes and full-width rows with wrapping titles at accessibility sizes; episode lists keep titles and summaries concise and open full details on selection.
 - RSS entry uses `Form` and a URL `TextField`. Cancel and Add occupy the standard sheet toolbar positions.
 - Settings use native pickers, toggles, and forms. Destructive actions use the destructive role and an explicit confirmation.
 - Playback uses native sliders, volume and route controls, and a system tab accessory for the mini player.

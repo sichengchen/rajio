@@ -13,6 +13,11 @@ public struct ListeningProgress: Codable, Equatable, Sendable {
 public actor LibraryDatabase {
   private let queue: DatabaseQueue
 
+  /// Release SQLite handles before removing or replacing the database directory.
+  public func close() throws {
+    try queue.close()
+  }
+
   public init(path: String) throws {
     queue = try DatabaseQueue(path: path)
     var migrator = DatabaseMigrator()
