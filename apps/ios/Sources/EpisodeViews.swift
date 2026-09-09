@@ -34,6 +34,7 @@ struct ShowView: View {
 }
 
 struct EpisodeRow: View {
+  @EnvironmentObject private var downloads: DownloadManager
   let episode: Episode
   @ObservedObject var model: LibraryModel
   @ObservedObject var audio: AudioPlayer
@@ -58,6 +59,14 @@ struct EpisodeRow: View {
             Image(systemName: "heart.fill").accessibilityLabel("Favorite")
           }
         }.font(.caption).foregroundStyle(.secondary)
+        if let record = downloads.records[episode.id] {
+          if record.status == "downloaded" {
+            Label("Downloaded", systemImage: "arrow.down.circle.fill").font(.caption)
+              .foregroundStyle(.secondary)
+          } else if record.status == "downloading" {
+            ProgressView(value: record.progress).accessibilityLabel("Download progress")
+          }
+        }
         Text(episode.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
       }.padding(.vertical, 4)
     }
@@ -80,6 +89,7 @@ struct EpisodeRow: View {
 }
 
 struct EpisodeDetailView: View {
+  @EnvironmentObject private var downloads: DownloadManager
   let episode: Episode
   @ObservedObject var model: LibraryModel
   @ObservedObject var audio: AudioPlayer
@@ -110,6 +120,7 @@ struct EpisodeDetailView: View {
           }.labelStyle(.iconOnly).padding(8)
         }
       }.padding()
+      DownloadControl(episode: episode).padding(.horizontal).padding(.bottom, 8)
       ShowNotes(html: episode.content ?? episode.description)
     }
     .navigationTitle("Episode").navigationBarTitleDisplayMode(.inline)
@@ -156,5 +167,35 @@ struct ShowNotes: UIViewRepresentable {
         decisionHandler(action.request.url?.scheme == "about" ? .allow : .cancel)
       }
     }
+  }
+}
+
+struct DownloadControl: View {
+  let episode: Episode
+  @EnvironmentObject private var downloads: DownloadManager
+  var body: some View {
+    let record = downloads.records[episode.id]
+    VStack(alignment: .leading, spacing: 6) {
+      if record?.status == "downloading" {
+        HStack {
+          ProgressView(value: record?.progress ?? 0).accessibilityLabel("Download progress")
+          Button("Cancel") { Task { await downloads.cancel(episode.id) } }
+        }
+      } else if record?.status == "downloaded" {
+        HStack {
+          Label("Downloaded", systemImage: "checkmark.circle.fill").foregroundStyle(.secondary)
+          Spacer()
+          Button("Remove Download", role: .destructive) {
+            Task { await downloads.remove(episode.id) }
+          }
+        }
+      } else {
+        Button(
+          record?.status == "failed" || record?.status == "missing" ? "Retry Download" : "Download",
+          systemImage: "arrow.down.circle"
+        ) { Task { await downloads.download(episode) } }
+      }
+      if let error = record?.error { Text(error).font(.caption).foregroundStyle(.secondary) }
+    }.frame(maxWidth: .infinity, alignment: .leading)
   }
 }

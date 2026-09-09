@@ -352,6 +352,7 @@ public struct DownloadRecord: Codable, Equatable, Sendable {
   public var episodeId: String
   public var status: String
   public var progress: Double
+  public var taskToken: String?
   public var fileName: String?
   public var bytes: Int64
   public var error: String?

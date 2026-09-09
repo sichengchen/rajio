@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 
 struct LibraryView: View {
   @StateObject private var model: LibraryModel
+  @ObservedObject private var downloads: DownloadManager
   @StateObject private var audio: AudioPlayer
   @State private var adding = false
   @State private var importing = false
@@ -14,7 +15,8 @@ struct LibraryView: View {
   @State private var query = ""
   @Environment(\.scenePhase) private var phase
 
-  init(database: LibraryDatabase) {
+  init(database: LibraryDatabase, downloads: DownloadManager) {
+    self.downloads = downloads
     _model = StateObject(wrappedValue: LibraryModel(database: database))
     _audio = StateObject(wrappedValue: AudioPlayer(database: database))
   }
@@ -37,6 +39,7 @@ struct LibraryView: View {
               Text("Shows").tag("all")
               Text("Favorites").tag("favorites")
               Text("Queue").tag("queue")
+              Text("Downloads").tag("downloads")
             }.pickerStyle(.segmented)
           }
           if section == "all" {
@@ -63,7 +66,10 @@ struct LibraryView: View {
               }
             }
           } else {
-            let ids = section == "queue" ? model.queue : model.favorites
+            let ids =
+              section == "downloads"
+              ? downloads.records.keys.sorted()
+              : (section == "queue" ? model.queue : model.favorites)
             ForEach(
               ids.compactMap { id in model.episodes.first { $0.id == id } }.filter {
                 query.isEmpty || $0.title.localizedCaseInsensitiveContains(query)
@@ -77,7 +83,11 @@ struct LibraryView: View {
               }
               Task {
                 for index in offsets {
-                  await model.setCollection(section, episode: displayed[index], included: false)
+                  if section == "downloads" {
+                    await downloads.remove(displayed[index].id)
+                  } else {
+                    await model.setCollection(section, episode: displayed[index], included: false)
+                  }
                 }
               }
             }
@@ -93,7 +103,7 @@ struct LibraryView: View {
                 }
               }
             }
-            .moveDisabled(!query.isEmpty)
+            .moveDisabled(!query.isEmpty || section != "queue")
             if ids.isEmpty { Text("No episodes").foregroundStyle(.secondary) }
           }
         }
@@ -148,6 +158,7 @@ struct LibraryView: View {
         if case .failure(let error) = result { model.error = error.localizedDescription }
       }
       .task {
+        await downloads.restore()
         await model.reload()
         await audio.restore()
         await model.refresh()
@@ -158,6 +169,7 @@ struct LibraryView: View {
         }
       }
     }
+    .environmentObject(downloads)
     .safeAreaInset(edge: .bottom) {
       if let episode = audio.episode {
         HStack(spacing: 12) {
@@ -173,7 +185,8 @@ struct LibraryView: View {
                 }
               }
             }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-          }.buttonStyle(.plain).accessibilityHint("Open player")
+          }.buttonStyle(.plain).accessibilityHint("Open player").accessibilityIdentifier(
+            "mini-player")
           Button {
             audio.isPlaying ? audio.pause() : audio.resume()
           } label: {
@@ -189,20 +202,19 @@ struct LibraryView: View {
     .alert(
       "Something went wrong",
       isPresented: Binding(
-        get: { !adding && (model.error != nil || audio.error != nil) },
-        set: {
-          if !$0 {
-            model.error = nil
-            audio.error = nil
-          }
-        })
+        get: {
+          !adding && !fullPlayer
+            && (model.error != nil || audio.error != nil || downloads.error != nil)
+        },
+        set: { _ in })
     ) {
       Button("OK", role: .cancel) {
         model.error = nil
         audio.error = nil
+        downloads.error = nil
       }
     } message: {
-      Text(model.error ?? audio.error ?? "")
+      Text(model.error ?? audio.error ?? downloads.error ?? "")
     }
   }
 }

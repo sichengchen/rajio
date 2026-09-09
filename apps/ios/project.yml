@@ -54,7 +54,28 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
-        UIBackgroundModes: [audio]
+        UIBackgroundModes: [audio, fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.scchan.rajio.refresh]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+
+  RajioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Rajio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.uitests
+        TEST_TARGET_NAME: Rajio
+        OTHER_LDFLAGS: ''
+schemes:
+  Rajio:
+    build:
+      targets:
+        Rajio: all
+        RajioUITests: [test]
+    test:
+      targets: [RajioUITests]

@@ -31,6 +31,7 @@ struct PlayerView: View {
               ).accessibilityLabel("Playback position")
               HStack {
                 Text(Duration.seconds(audio.position).formatted(.time(pattern: .hourMinuteSecond)))
+                  .accessibilityIdentifier("elapsed-time")
                 Spacer()
                 Text(Duration.seconds(audio.duration).formatted(.time(pattern: .hourMinuteSecond)))
               }.font(.caption.monospacedDigit()).foregroundStyle(.secondary)
@@ -43,8 +44,9 @@ struct PlayerView: View {
                 Label(
                   audio.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
                   systemImage: audio.isPlaying ? "pause.fill" : "play.fill")
-              }.font(.largeTitle)
+              }.font(.largeTitle).accessibilityIdentifier("player-toggle")
               Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }
+                .accessibilityIdentifier("player-forward")
             }.labelStyle(.iconOnly).font(.title).buttonStyle(.borderless).padding(.vertical)
             HStack {
               Menu {

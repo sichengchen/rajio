@@ -1,6 +1,7 @@
 import AVFoundation
 import Combine
 import MediaPlayer
+import OSLog
 import RajioCore
 import RajioLibrary
 
@@ -13,6 +14,7 @@ final class AudioPlayer: ObservableObject {
   @Published private(set) var isLoading = false
   @Published private(set) var speed: Double = 1
   @Published var error: String?
+  private let logger = Logger(subsystem: "com.scchan.rajio.ios", category: "Playback")
   private let player = AVPlayer()
   private let database: LibraryDatabase
   private var timeObserver: Any?
@@ -133,6 +135,7 @@ final class AudioPlayer: ObservableObject {
         Task { @MainActor in
           guard let self, self.player.currentItem === item else { return }
           await self.checkpoint()
+          self.logger.notice("Item reached end")
           self.pause()
           await self.playNext()
         }
@@ -178,8 +181,22 @@ final class AudioPlayer: ObservableObject {
     do {
       let saved = try await database.progress(episodeId: next.id)
       guard requestID == request else { return }
-      guard let url = URL(string: next.audioUrl), ["http", "https"].contains(url.scheme ?? "")
+      guard var url = URL(string: next.audioUrl), ["http", "https"].contains(url.scheme ?? "")
       else { throw URLError(.badURL) }
+      if var download = try await database.downloads().first(where: {
+        $0.episodeId == next.id && $0.status == "downloaded"
+      }), let file = download.fileName {
+        let local = DownloadManager.downloadFolder.appendingPathComponent(file)
+        if FileManager.default.fileExists(atPath: local.path) {
+          url = local
+        } else {
+          download.status = "missing"
+          download.fileName = nil
+          download.bytes = 0
+          download.error = String(localized: "Downloaded file is missing. Download it again.")
+          try await database.saveDownload(download)
+        }
+      }
       try await database.selectEpisode(next.id)
       guard requestID == request else { return }
       episode = next
@@ -197,8 +214,11 @@ final class AudioPlayer: ObservableObject {
           guard let self, self.requestID == request, self.player.currentItem === item else {
             return
           }
+          self.logger.notice(
+            "Item status \(item.status.rawValue), requested playback \(self.wantsPlayback)")
           switch item.status {
           case .failed:
+            self.logger.error("Media failed: \(String(describing: item.error))")
             self.isSeeking = false
             self.pause()
             self.error = String(localized: "Playback failed. Try again.")
@@ -229,6 +249,8 @@ final class AudioPlayer: ObservableObject {
   }
 
   func resume() {
+    logger.notice(
+      "Resume, ready \(self.player.currentItem?.status.rawValue ?? -1), seeking \(self.isSeeking)")
     guard let episode else { return }
     if player.currentItem == nil || player.currentItem?.status == .failed {
       Task { await prepare(episode, autoplay: true) }
@@ -251,6 +273,7 @@ final class AudioPlayer: ObservableObject {
   }
 
   func pause(preserveInterruptionIntent: Bool = false) {
+    logger.notice("Pause, interruption \(preserveInterruptionIntent)")
     if !preserveInterruptionIntent { resumeAfterInterruption = false }
     wantsPlayback = false
     player.pause()

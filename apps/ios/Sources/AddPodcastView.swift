@@ -25,7 +25,7 @@ struct AddPodcastView: View {
         Section("RSS feed") {
           TextField("Feed URL", text: $feedURL).keyboardType(.URL).textInputAutocapitalization(
             .never
-          ).autocorrectionDisabled()
+          ).autocorrectionDisabled().accessibilityIdentifier("feed-url")
           Button("Add") { subscribe(feedURL) }.disabled(
             model.isLoading || feedURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
