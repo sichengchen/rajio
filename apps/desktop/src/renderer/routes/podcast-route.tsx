@@ -1,3 +1,5 @@
+import { t } from "../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -13,6 +15,7 @@ import type { Episode } from "@/lib/types";
 const emptyEpisodes: Episode[] = [];
 
 export function PodcastRoutePage({ podcastId }: { podcastId: string }) {
+  useLocale();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -42,9 +45,9 @@ export function PodcastRoutePage({ podcastId }: { podcastId: string }) {
 
     try {
       await refreshPodcast(podcast.id);
-      toast.success(`Updated ${podcast.title}`);
+      toast.success(t("Updated {name}", { name: podcast.title }));
     } catch {
-      toast.error(`Failed to update ${podcast.title}`);
+      toast.error(t("Failed to update {name}", { name: podcast.title }));
     }
   };
 
@@ -61,9 +64,9 @@ export function PodcastRoutePage({ podcastId }: { podcastId: string }) {
       } else {
         navigate({ to: "/whats-new" });
       }
-      toast.success(`Removed ${podcast.title}`);
+      toast.success(t("Removed {name}", { name: podcast.title }));
     } catch {
-      toast.error(`Failed to remove ${podcast.title}`);
+      toast.error(t("Failed to remove {name}", { name: podcast.title }));
     } finally {
       setIsRemoving(false);
     }
@@ -71,7 +74,11 @@ export function PodcastRoutePage({ podcastId }: { podcastId: string }) {
 
   return (
     <RequireSubscriptions>
-      <AppPageLayout backTo="/library" title={isMobile ? podcast?.title : undefined}>
+      <AppPageLayout
+        centered={!podcast}
+        backTo="/library"
+        title={isMobile ? podcast?.title : undefined}
+      >
         {podcast ? (
           <div className="mx-auto max-w-4xl">
             <PodcastDetails

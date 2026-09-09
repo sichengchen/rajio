@@ -1,3 +1,4 @@
+import { applyLibrary } from "@rajio-app/core-wasm/node";
 import path from "node:path";
 
 import type { DesktopSettings } from "../shared/types";
@@ -35,7 +36,30 @@ export class SettingsService {
       throw new Error("Download directory must be an absolute path.");
     }
 
-    this.db.setSettings(settings);
+    if (
+      settings.downloadLimitBytes !== undefined &&
+      (!Number.isSafeInteger(Number(settings.downloadLimitBytes)) ||
+        Number(settings.downloadLimitBytes) <= 0)
+    )
+      throw new Error("Download limit must be a positive number of bytes.");
+    this.db.transaction(() => {
+      const normalized = { ...settings };
+      for (const [key, name] of [["favoriteEpisodes", "favorites"], ["playbackQueue", "queue"]] as const) {
+        const value = settings[key];
+        if (value === undefined) continue;
+        const parsed = JSON.parse(value);
+        if (parsed?.version !== 1 || !Array.isArray(parsed.episodeIds) ||
+            !parsed.episodeIds.every((id: unknown) => typeof id === "string")) {
+          throw new Error("Invalid collection payload");
+        }
+        const ids = applyLibrary({ kind: "normalizeCollection", name, ids: parsed.episodeIds });
+        normalized[key] = JSON.stringify({ episodeIds: ids, version: 1 });
+        if (normalized[key] !== this.db.getSettings()[key]) {
+          this.db.appendOutbox(`collection.${name}.v1`, ids);
+        }
+      }
+      this.db.setSettings(normalized);
+    });
     return this.get();
   }
 

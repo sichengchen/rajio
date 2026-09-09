@@ -1,0 +1,5 @@
+module CRajioCore {
+    header "rajio_core.h"
+    link "rajio_core"
+    export *
+}

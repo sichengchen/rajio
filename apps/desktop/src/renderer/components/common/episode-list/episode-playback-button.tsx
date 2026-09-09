@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { Pause, Play } from "lucide-react";
@@ -15,6 +17,7 @@ interface EpisodePlaybackButtonProps {
 }
 
 export function EpisodePlaybackButton({ episode, onPlay, progress }: EpisodePlaybackButtonProps) {
+  useLocale();
   const isCurrentEpisode = usePodcastStore(
     (state) => state.playbackState.currentEpisode?.id === episode.id,
   );
@@ -38,10 +41,10 @@ export function EpisodePlaybackButton({ episode, onPlay, progress }: EpisodePlay
     ? progress?.isCompleted
       ? formatTime(duration)
       : position > 0
-        ? `${formatTime(Math.max(duration - position, 0))} remaining`
+        ? t("{time} remaining", { time: formatTime(Math.max(duration - position, 0)) })
         : formatTime(duration)
     : null;
-  const action = isCurrentEpisode && isPlaying ? "Pause" : "Play";
+  const action = isCurrentEpisode && isPlaying ? t("Pause") : t("Play");
   const visibleTimeLabel = hasProgress ? formatTime(Math.max(duration - position, 0)) : timeLabel;
 
   const handleClick = () => {
@@ -65,7 +68,7 @@ export function EpisodePlaybackButton({ episode, onPlay, progress }: EpisodePlay
       className={visibleTimeLabel ? "h-7 gap-1.5 px-2.5 text-xs leading-none" : "size-7"}
       onClick={handleClick}
       size={visibleTimeLabel ? "sm" : "icon"}
-      title={`${action} episode`}
+      title={action}
       type="button"
       variant="outline"
     >
@@ -76,7 +79,7 @@ export function EpisodePlaybackButton({ episode, onPlay, progress }: EpisodePlay
       )}
       {hasProgress ? (
         <Progress
-          aria-label={`${Math.round((position / duration) * 100)}% played`}
+          aria-label={t("{percent}% played", { percent: Math.round((position / duration) * 100) })}
           className="h-1 w-8 bg-muted-foreground/25 [&_[data-slot=progress-indicator]]:bg-foreground"
           value={(position / duration) * 100}
         />

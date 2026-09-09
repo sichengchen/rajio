@@ -1,0 +1,35 @@
+{
+  "request": {
+    "feedUrl": "https://example.com/节目🎧.xml",
+    "xml": "<rss><channel><item><title>简体 繁體 日本語 Français Español Deutsch 🎧</title><enclosure url=\"https://example.com/音声🎧.mp3\"/><duration>12:34</duration><pubDate>invalid</pubDate></item><item><title>Second</title><enclosure url=\"https://example.com/second.mp3\"/><duration>125</duration></item></channel></rss>",
+    "fetchedAt": "2026-09-05T00:00:00.000Z"
+  },
+  "expected": {
+    "episodes": [
+      {
+        "audioUrl": "https://example.com/音声🎧.mp3",
+        "description": "",
+        "duration": 754,
+        "id": "episode_1688214566",
+        "podcastId": "podcast_648860257",
+        "title": "简体 繁體 日本語 Français Español Deutsch 🎧"
+      },
+      {
+        "audioUrl": "https://example.com/second.mp3",
+        "description": "",
+        "duration": 125,
+        "id": "episode_250240455",
+        "podcastId": "podcast_648860257",
+        "title": "Second"
+      }
+    ],
+    "podcast": {
+      "description": "",
+      "feedUrl": "https://example.com/节目🎧.xml",
+      "id": "podcast_648860257",
+      "lastUpdated": "2026-09-05T00:00:00.000Z",
+      "subscriptionDate": "2026-09-05T00:00:00.000Z",
+      "title": "example.com"
+    }
+  }
+}

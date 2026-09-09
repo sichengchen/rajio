@@ -1,4 +1,6 @@
-import { BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from "electron";
+import { setLanguage } from "../shared/i18n";
+import { t } from "../shared/i18n";
+import { app, BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from "electron";
 
 import { ipcChannels } from "../shared/ipc";
 import { DownloadService } from "./downloads";
@@ -6,25 +8,49 @@ import type { LocalDatabase } from "./db";
 import { LibraryService } from "./library";
 import { PlaybackService } from "./playback";
 import { SettingsService } from "./settings";
+import { RefreshScheduler } from "./refresh";
 import { SyncService } from "./sync";
 
-export function registerIpcHandlers(db: LocalDatabase, defaultDownloadDirectory: string): void {
+export function registerIpcHandlers(
+  db: LocalDatabase,
+  defaultDownloadDirectory: string,
+): RefreshScheduler {
   const settings = new SettingsService(db, defaultDownloadDirectory);
-  const downloads = new DownloadService(db, () => settings.getDownloadDirectory());
+  const downloads = new DownloadService(
+    db,
+    () => settings.getDownloadDirectory(),
+    (status) => {
+      for (const window of BrowserWindow.getAllWindows())
+        window.webContents.send(ipcChannels.downloads.changed, status);
+    },
+  );
+  ipcMain.handle(ipcChannels.downloads.cancel, (_event, episodeId: string) =>
+    downloads.cancel(episodeId),
+  );
+  ipcMain.handle(ipcChannels.downloads.statuses, () => downloads.statuses());
   const library = new LibraryService(db);
   const playback = new PlaybackService(db);
   const sync = new SyncService(db);
+  const refresh = new RefreshScheduler(library, (state) => {
+    if (!state.running)
+      for (const window of BrowserWindow.getAllWindows())
+        window.webContents.send(ipcChannels.library.changed);
+  });
+  ipcMain.handle(ipcChannels.library.refreshAll, () => refresh.run(true));
+  ipcMain.handle(ipcChannels.library.refreshState, () => refresh.state);
 
   ipcMain.handle(ipcChannels.library.list, () => library.listPodcasts());
   ipcMain.handle(ipcChannels.library.subscribe, (_event, feedUrl: string) =>
     library.subscribe(feedUrl),
   );
-  ipcMain.handle(ipcChannels.library.unsubscribe, (_event, podcastId: string) =>
-    library.unsubscribe(podcastId),
-  );
+  ipcMain.handle(ipcChannels.library.unsubscribe, async (_event, podcastId: string) => {
+    for (const episode of db.listEpisodesByPodcast(podcastId)) await downloads.delete(episode.id);
+    await library.unsubscribe(podcastId);
+  });
   ipcMain.handle(ipcChannels.library.refresh, (_event, podcastId: string) =>
     library.refresh(podcastId),
   );
+  ipcMain.handle(ipcChannels.episodes.byIds, (_event, ids: string[]) => db.listEpisodesByIds(ids));
   ipcMain.handle(ipcChannels.episodes.listAll, () => library.listEpisodes());
   ipcMain.handle(ipcChannels.episodes.listLatest, (_event, request) =>
     library.listLatestEpisodes(request),
@@ -54,10 +80,10 @@ export function registerIpcHandlers(db: LocalDatabase, defaultDownloadDirectory:
 
   ipcMain.handle(ipcChannels.settings.chooseDownloadDirectory, async (event) => {
     const options: OpenDialogOptions = {
-      buttonLabel: "Choose",
+      buttonLabel: t("Choose"),
       defaultPath: settings.getDownloadDirectory(),
       properties: ["openDirectory", "createDirectory"],
-      title: "Choose Download Folder",
+      title: t("Choose Download Folder"),
     };
     const parentWindow = BrowserWindow.fromWebContents(event.sender);
     const result = parentWindow
@@ -72,7 +98,12 @@ export function registerIpcHandlers(db: LocalDatabase, defaultDownloadDirectory:
     return settings.setDownloadDirectory(downloadDirectory);
   });
   ipcMain.handle(ipcChannels.settings.get, () => settings.get());
-  ipcMain.handle(ipcChannels.settings.set, (_event, nextSettings) => settings.set(nextSettings));
+  ipcMain.handle(ipcChannels.settings.set, async (_event, nextSettings) => {
+    const result = await settings.set(nextSettings);
+    setLanguage(result.language, app.getLocale());
+    return result;
+  });
 
   ipcMain.handle(ipcChannels.sync.now, () => sync.syncNow());
+  return refresh;
 }

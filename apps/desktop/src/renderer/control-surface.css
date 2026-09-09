@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+.compact-player {
+  padding: 0 18px 12px;
+}
+.compact-titlebar {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  -webkit-app-region: drag;
+}
+.compact-titlebar button {
+  width: 28px;
+  height: 28px;
+  color: var(--muted-foreground);
+  -webkit-app-region: no-drag;
+}
+.compact-episode {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.compact-episode h1 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.compact-episode p {
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.compact-episode nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+.compact-episode nav button {
+  width: 30px;
+  height: 30px;
+}
+.compact-episode nav svg {
+  width: 16px;
+  height: 16px;
+}
+.compact-progress {
+  margin-top: 18px;
+}
+.compact-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.compact-player[data-surface="tray"] .compact-titlebar {
+  height: 24px;
+}

@@ -2,64 +2,19 @@
   "name": "@rajio-app/desktop",
   "version": "0.10.1",
   "private": true,
-  "type": "module",
-  "productName": "Rajio",
   "description": "New podCast player: Listen and Explore.",
+  "type": "module",
   "main": "scripts/electron-entry.cjs",
   "scripts": {
     "dev": "concurrently --kill-others-on-fail --names renderer,electron \"vite --host 127.0.0.1 --port 5173 --strictPort\" \"tsx ./scripts/start-electron-dev.ts\"",
     "build": "pnpm build:main && pnpm build:preload && pnpm build:renderer",
-    "build:main": "vite build --config vite.main.config.ts",
+    "build:main": "pnpm --filter @rajio-app/core-wasm build && vite build --config vite.main.config.ts",
     "build:preload": "vite build --config vite.preload.config.ts",
     "build:renderer": "vite build --config vite.config.ts",
     "package:mac": "pnpm build && electron-builder --mac --publish never",
     "check": "tsc --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "preview": "pnpm build && electron ."
-  },
-  "build": {
-    "appId": "com.scchan.rajio",
-    "productName": "Rajio",
-    "artifactName": "${productName}-${version}-${arch}.${ext}",
-    "directories": {
-      "buildResources": "resources",
-      "output": "release"
-    },
-    "extraResources": [
-      {
-        "from": "resources/icon.png",
-        "to": "icon.png"
-      }
-    ],
-    "files": [
-      "dist/**",
-      "package.json",
-      "scripts/electron-entry.cjs"
-    ],
-    "mac": {
-      "category": "public.app-category.music",
-      "entitlements": "resources/entitlements.mac.plist",
-      "entitlementsInherit": "resources/entitlements.mac.inherit.plist",
-      "hardenedRuntime": true,
-      "icon": "resources/icon.png",
-      "notarize": true,
-      "x64ArchFiles": "**/node_modules/better-sqlite3/prebuilds/*.node",
-      "target": [
-        {
-          "arch": [
-            "universal"
-          ],
-          "target": "dmg"
-        }
-      ]
-    },
-    "win": {
-      "icon": "resources/icon.png"
-    },
-    "linux": {
-      "category": "Audio",
-      "icon": "resources/icon.png"
-    }
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.6",
@@ -79,6 +34,7 @@
     "@radix-ui/react-toggle": "1.1.9",
     "@radix-ui/react-tooltip": "1.2.7",
     "@rajio-app/contracts": "workspace:*",
+    "@rajio-app/core-wasm": "workspace:*",
     "@tanstack/react-query": "5.99.1",
     "@tanstack/react-router": "1.168.23",
     "@vitejs/plugin-react": "^5.1.0",
@@ -112,5 +68,69 @@
     "tw-animate-css": "1.3.5",
     "typescript": "^5.8.3",
     "vite": "^8.0.8"
-  }
+  },
+  "build": {
+    "appId": "com.scchan.rajio",
+    "productName": "Rajio",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "buildResources": "resources",
+      "output": "release"
+    },
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/Assets.car",
+        "to": "Assets.car"
+      },
+      {
+        "from": "resources/icon-macos.png",
+        "to": "icon-macos.png"
+      },
+      {
+        "from": "resources/trayTemplate.png",
+        "to": "trayTemplate.png"
+      },
+      {
+        "from": "resources/trayTemplate@2x.png",
+        "to": "trayTemplate@2x.png"
+      }
+    ],
+    "files": [
+      "dist/**",
+      "package.json",
+      "scripts/electron-entry.cjs"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.inherit.plist",
+      "hardenedRuntime": true,
+      "icon": "resources/Rajio.icns",
+      "notarize": true,
+      "x64ArchFiles": "**/node_modules/better-sqlite3/prebuilds/*.node",
+      "target": [
+        {
+          "arch": [
+            "universal"
+          ],
+          "target": "dmg"
+        }
+      ],
+      "extendInfo": {
+        "CFBundleIconName": "Rajio"
+      }
+    },
+    "win": {
+      "icon": "resources/icon.png"
+    },
+    "linux": {
+      "category": "Audio",
+      "icon": "resources/icon.png"
+    }
+  },
+  "productName": "Rajio"
 }

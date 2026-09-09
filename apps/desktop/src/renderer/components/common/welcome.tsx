@@ -1,13 +1,15 @@
-"use client";
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
+("use client");
 
 import { useRef } from "react";
 import { Radio, Plus, Import } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePodcastStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export function WelcomeScreen() {
+  useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { importFromOPML, progressDialog, setShowAddPodcastDialog } = usePodcastStore();
@@ -25,19 +27,21 @@ export function WelcomeScreen() {
       const result = await importFromOPML(text);
 
       if (result.imported > 0) {
-        toast.success(`Successfully imported ${result.imported} podcast(s)!`);
+        toast.success(t("Imported podcasts: {count}", { count: result.imported }));
         if (result.errors > 0) {
           toast.warning(
-            `${result.errors} podcast(s) could not be imported. The feed may be unavailable or require access.`,
+            t("Feeds unavailable or requiring access: {count}", { count: result.errors }),
           );
         }
       } else {
-        toast.error("No podcasts were imported. Please check the OPML file format.");
+        toast.error(t("No podcasts were imported. Please check the OPML file format."));
       }
     } catch (error) {
       console.error("OPML import error:", error);
       toast.error(
-        `Failed to import OPML file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("Failed to import OPML file: {error}", {
+          error: error instanceof Error ? error.message : t("Unknown error"),
+        }),
       );
     }
 
@@ -48,40 +52,42 @@ export function WelcomeScreen() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-8rem)] p-8">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Radio className="w-8 h-8 text-primary" />
+    <div className="flex items-center justify-center">
+      <section className="flex w-full max-w-sm flex-col gap-6" aria-labelledby="welcome-title">
+        <header className="flex flex-col items-center gap-4 text-center">
+          <div className="flex size-14 items-center justify-center rounded-xl bg-muted">
+            <Radio className="size-7 text-foreground" />
           </div>
-          <CardTitle className="text-2xl">Welcome!</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center space-y-4 px-8">
+          <h1 id="welcome-title" className="text-2xl font-semibold tracking-tight">
+            {t("Welcome to Rajio")}
+          </h1>
+        </header>
+        <div className="flex flex-col gap-4 text-center">
           <p className="text-muted-foreground text-sm">
-            Rajio is a podcast player. Get started by adding your first podcast.
+            {t("Rajio is a podcast player. Get started by adding your first podcast.")}
           </p>
 
-          <div className="space-y-2">
-            <Button className="w-full" size="lg" onClick={() => setShowAddPodcastDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Podcast
+          <div className="flex flex-col gap-2">
+            <Button className="w-full" size="default" onClick={() => setShowAddPodcastDialog(true)}>
+              <Plus data-icon="inline-start" />
+              {t("Add Podcast")}
             </Button>
 
             <p className="text-sm text-muted-foreground mt-2">
-              Or import your subscriptions from an OPML file
+              {t("Or import your subscriptions from an OPML file")}
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Button
               className="w-full"
-              size="lg"
+              size="default"
               variant="outline"
               onClick={handleImportClick}
               disabled={progressDialog.isOpen}
             >
-              <Import className="w-4 h-4 mr-2" />
-              {progressDialog.isOpen ? "Importing..." : "Import OPML"}
+              <Import data-icon="inline-start" />
+              {progressDialog.isOpen ? t("Importing...") : t("Import OPML")}
             </Button>
           </div>
 
@@ -92,8 +98,8 @@ export function WelcomeScreen() {
             onChange={handleFileSelect}
             className="hidden"
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useCallback, useEffect } from "react";
@@ -13,6 +15,7 @@ interface PodcastEpisodesProps {
 const emptyEpisodes: Episode[] = [];
 
 export function PodcastEpisodes({ podcastId }: PodcastEpisodesProps) {
+  useLocale();
   const episodes = usePodcastStore((state) => state.episodeCache.get(podcastId) ?? emptyEpisodes);
   const pageState = usePodcastStore((state) => state.episodePageState.get(podcastId));
   const playbackProgress = usePodcastStore((state) => state.playbackProgress);
@@ -48,9 +51,7 @@ export function PodcastEpisodes({ podcastId }: PodcastEpisodesProps) {
   return (
     <section aria-labelledby="episode-list-heading" className="pt-5">
       <div className="flex items-baseline gap-2 px-2 pb-1.5">
-        <h2 className="text-lg font-semibold tracking-[-0.015em]" id="episode-list-heading">
-          Episodes
-        </h2>
+        <h2 className="text-lg font-semibold tracking-[-0.015em]" id="episode-list-heading">{t("Episodes")}</h2>
         {pageState?.total ? (
           <ContentMetadata className="text-sm" items={[`${pageState.total} episodes`]} />
         ) : null}

@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { DesktopSafeScrollArea } from "@/components/common/desktop-safe-scroll-area";
@@ -7,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePodcastStore } from "@/lib/store";
 
 export function ShowNotes() {
+  useLocale();
   const currentEpisode = usePodcastStore((state) => state.playbackState.currentEpisode);
   const seekToTime = usePodcastStore((state) => state.seekToTime);
   const isMobile = useIsMobile();
@@ -21,7 +24,7 @@ export function ShowNotes() {
 
   return (
     <section className="app-no-drag flex h-full min-w-0 flex-col bg-background">
-      <PlayerPanelHeader title="Show Notes" />
+      <PlayerPanelHeader title={t("Show Notes")} />
       {isMobile ? (
         <div
           className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 pb-8 pt-7"
@@ -41,16 +44,17 @@ export function ShowNotes() {
 }
 
 function ShowNotesEmptyState({ hasEpisode }: { hasEpisode: boolean }) {
+  useLocale();
   return (
     <div className="flex min-h-56 items-center justify-center px-6 text-center">
       <div className="max-w-56">
         <p className="text-sm font-medium text-foreground">
-          {hasEpisode ? "No notes for this episode" : "Nothing playing"}
+          {hasEpisode ? t("No notes for this episode") : t("Nothing playing")}
         </p>
         <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
           {hasEpisode
-            ? "You can still listen using the player below."
-            : "Play an episode to read along."}
+            ? t("You can still listen using the player below.")
+            : t("Play an episode to read along.")}
         </p>
       </div>
     </div>

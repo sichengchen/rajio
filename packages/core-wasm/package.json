@@ -1,0 +1,21 @@
+{
+  "name": "@rajio-app/core-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./module": "./generated/rajio_core_bg.wasm",
+    "./node": {
+      "types": "./src/index.d.ts",
+      "default": "./src/node.js"
+    }
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-core-wasm.mjs",
+    "test": "node ../../scripts/build-core-wasm.mjs && node --test test/*.test.mjs"
+  }
+}

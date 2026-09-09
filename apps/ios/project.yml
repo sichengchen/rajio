@@ -1,0 +1,99 @@
+name: Rajio
+options:
+  knownRegions: [en, zh-Hans, zh-Hant, ja, fr, es, de]
+  developmentLanguage: en
+  bundleIdPrefix: com.scchan
+  deploymentTarget:
+    iOS: '17.0'
+packages:
+  RajioLibrary:
+    path: ../../packages/ios-library
+  RajioCore:
+    path: ../../packages/core-swift
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.ios
+    MARKETING_VERSION: '0.10.1'
+    CURRENT_PROJECT_VERSION: 1
+    ASSETCATALOG_COMPILER_APPICON_NAME: Rajio
+    GENERATE_INFOPLIST_FILE: YES
+    'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]': '$(inherited) $(SRCROOT)/../../target/ios-simulator'
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]': '$(inherited) $(SRCROOT)/../../target/ios-device-core'
+    OTHER_LDFLAGS: '$(inherited) -lrajio_core'
+targets:
+  Rajio:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: Rajio
+    preBuildScripts:
+      - name: Build native Rust core
+        script: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          unset SDKROOT
+          bash "$SRCROOT/../../scripts/build-core-ios.sh"
+        basedOnDependencyAnalysis: true
+        inputFiles:
+          - $(SRCROOT)/../../Cargo.lock
+          - $(SRCROOT)/../../crates/rajio-core/Cargo.toml
+          - $(SRCROOT)/../../crates/rajio-core/src/lib.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/feed.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/native.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/library.rs
+          - $(SRCROOT)/../../scripts/build-core-ios.sh
+        outputFiles:
+          - $(SRCROOT)/../../target/ios-simulator/librajio_core.a
+          - $(SRCROOT)/../../target/ios-device-core/librajio_core.a
+    dependencies:
+      - package: RajioLibrary
+      - package: RajioCore
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Rajio
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIBackgroundModes: [audio, fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.scchan.rajio.refresh]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+
+  RajioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Rajio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.tests
+
+  RajioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Rajio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.uitests
+        TEST_TARGET_NAME: Rajio
+        OTHER_LDFLAGS: ''
+schemes:
+  Rajio:
+    build:
+      targets:
+        Rajio: all
+        RajioUITests: [test]
+        RajioTests: [test]
+    test:
+      targets: [RajioUITests, RajioTests]
+      environmentVariables:
+        RAJIO_TEST_LIBRARY: 52C55C7C-1F86-481C-9362-61EC4EB98680

@@ -1,3 +1,4 @@
+import { t, getLocale } from "../../shared/i18n";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -60,26 +61,26 @@ export function formatEpisodeDate(date: Date | string, now = new Date()): string
   const dateValue = typeof date === "string" ? new Date(date) : date;
 
   if (Number.isNaN(dateValue.getTime())) {
-    return "Unknown date";
+    return t("Unknown date");
   }
 
   if (isSameCalendarDay(dateValue, now)) {
-    return "Today";
+    return t("Today");
   }
 
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   if (isSameCalendarDay(dateValue, yesterday)) {
-    return "Yesterday";
+    return t("Yesterday");
   }
 
   const thisWeek = startOfWeek(now);
   const lastWeek = new Date(thisWeek);
   lastWeek.setDate(lastWeek.getDate() - 7);
   if (dateValue >= lastWeek && dateValue < thisWeek) {
-    return "Last week";
+    return t("Last week");
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(getLocale(), {
     day: "numeric",
     month: "short",
     year: dateValue.getFullYear() === now.getFullYear() ? undefined : "numeric",
@@ -90,30 +91,30 @@ export function formatEpisodeDateGroup(date: Date | string, now = new Date()): s
   const dateValue = typeof date === "string" ? new Date(date) : date;
 
   if (Number.isNaN(dateValue.getTime())) {
-    return "Earlier";
+    return t("Earlier");
   }
 
   if (isSameCalendarDay(dateValue, now)) {
-    return "Today";
+    return t("Today");
   }
 
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   if (isSameCalendarDay(dateValue, yesterday)) {
-    return "Yesterday";
+    return t("Yesterday");
   }
 
   const thisWeek = startOfWeek(now);
   if (dateValue >= thisWeek) {
-    return "This week";
+    return t("This week");
   }
 
   const lastWeek = new Date(thisWeek);
   lastWeek.setDate(lastWeek.getDate() - 7);
   if (dateValue >= lastWeek) {
-    return "Last week";
+    return t("Last week");
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(getLocale(), {
     month: "long",
     year: dateValue.getFullYear() === now.getFullYear() ? undefined : "numeric",
   }).format(dateValue);
@@ -123,48 +124,37 @@ export function formatLastPlayedDate(date: Date | string, now = new Date()): str
   const dateValue = typeof date === "string" ? new Date(date) : date;
 
   if (Number.isNaN(dateValue.getTime())) {
-    return "Played recently";
+    return t("Played recently");
   }
 
   if (isSameCalendarDay(dateValue, now)) {
-    return "Played today";
+    return t("Played today");
   }
 
   const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   if (isSameCalendarDay(dateValue, yesterday)) {
-    return "Played yesterday";
+    return t("Played yesterday");
   }
 
   const formattedDate = formatEpisodeDate(dateValue, now);
-  return formattedDate === "Last week" ? "Played last week" : `Last played ${formattedDate}`;
+  return formattedDate === t("Last week") ? t("Played last week") : t("Last played {date}", { date: formattedDate });
 }
 
 // Format date to a readable string
 export function formatDate(date: Date | string): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
 
-  if (isNaN(dateObj.getTime())) return "Invalid date";
+  if (isNaN(dateObj.getTime())) return t("Invalid date");
 
   const now = new Date();
   const diffInMs = now.getTime() - dateObj.getTime();
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-  if (diffInDays === 0) {
-    return "Today";
-  } else if (diffInDays === 1) {
-    return "Yesterday";
-  } else if (diffInDays < 7) {
-    return `${diffInDays} days ago`;
-  } else if (diffInDays < 30) {
-    const weeks = Math.floor(diffInDays / 7);
-    return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
-  } else if (diffInDays < 365) {
-    const months = Math.floor(diffInDays / 30);
-    return months === 1 ? "1 month ago" : `${months} months ago`;
-  } else {
-    const years = Math.floor(diffInDays / 365);
-    return years === 1 ? "1 year ago" : `${years} years ago`;
-  }
+  const relative = new Intl.RelativeTimeFormat(getLocale(), { numeric: "auto" });
+  if (Math.abs(diffInDays) < 7) return relative.format(-diffInDays, "day");
+  if (Math.abs(diffInDays) < 30) return relative.format(-Math.floor(diffInDays / 7), "week");
+  if (Math.abs(diffInDays) < 365) return relative.format(-Math.floor(diffInDays / 30), "month");
+  return relative.format(-Math.floor(diffInDays / 365), "year");
 }
 
 // Parse timestamp string (like "36:01" or "1:23:45") to seconds

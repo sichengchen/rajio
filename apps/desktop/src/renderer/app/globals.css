@@ -290,3 +290,9 @@
     animation: text-scroll var(--scroll-duration) ease-in-out infinite;
   }
 }
+
+/* Each separator belongs to the row above it. Hide both sides of a hovered row. */
+[data-list-item][data-interactive]:hover::after,
+[data-list-item]:has(+ [data-list-item][data-interactive]:hover)::after {
+  opacity: 0;
+}

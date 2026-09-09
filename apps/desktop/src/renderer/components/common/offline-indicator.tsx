@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,6 +7,7 @@ import { Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function OfflineIndicator() {
+  useLocale();
   const [isOnline, setIsOnline] = useState(true);
   const [showIndicator, setShowIndicator] = useState(false);
 
@@ -47,12 +50,12 @@ export function OfflineIndicator() {
       {isOnline ? (
         <>
           <Wifi className="h-4 w-4" />
-          <span className="text-sm font-medium">Back online</span>
+          <span className="text-sm font-medium">{t("Back online")}</span>
         </>
       ) : (
         <>
           <WifiOff className="h-4 w-4" />
-          <span className="text-sm font-medium">You&apos;re offline</span>
+          <span className="text-sm font-medium">{t("You're offline")}</span>
         </>
       )}
     </div>

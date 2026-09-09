@@ -16,22 +16,20 @@ const ListItem = React.forwardRef<
 >(({ className, interactive = false, onKeyDown, ...props }, ref) => (
   <div
     ref={ref}
+    data-list-item=""
+    data-interactive={interactive || undefined}
     className={cn(
       "relative flex w-full min-w-0 items-center py-4 px-4",
       "after:content-[''] after:absolute after:bottom-0 after:left-4 after:right-4 after:h-px after:bg-border last:after:hidden",
       interactive && [
         "cursor-pointer transition-colors",
-        "hover:bg-accent hover:text-accent-foreground hover:rounded-lg hover:after:hidden",
+        "hover:bg-accent hover:text-accent-foreground hover:rounded-lg",
       ],
       className,
     )}
     onKeyDown={(event) => {
       onKeyDown?.(event);
-      if (
-        !event.defaultPrevented &&
-        interactive &&
-        (event.key === "Enter" || event.key === " ")
-      ) {
+      if (!event.defaultPrevented && interactive && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
         event.currentTarget.click();
       }

@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { type KeyboardEvent, type ReactNode } from "react";
@@ -34,13 +36,14 @@ interface PodcastListProps<TPodcast extends PodcastListPodcast> {
 }
 
 export function PodcastList<TPodcast extends PodcastListPodcast>({
-  getDescription = (podcast) => podcast.author || podcast.description || "Podcast",
+  getDescription = (podcast) => podcast.author || podcast.description || t("Podcast"),
   getKey = (podcast) => podcast.id,
-  getMeta = () => "Podcast",
+  getMeta = () => t("Podcast"),
   onOpen,
   podcasts,
   renderActions,
 }: PodcastListProps<TPodcast>) {
+  useLocale();
   const handleKeyDown = (podcast: TPodcast, event: KeyboardEvent<HTMLDivElement>) => {
     if (!onOpen || (event.key !== "Enter" && event.key !== " ")) {
       return;
@@ -71,7 +74,7 @@ export function PodcastList<TPodcast extends PodcastListPodcast>({
           >
             <ListItemLeading>
               <CoverImage
-                alt={`${podcast.title} cover`}
+                alt={t("{name} cover", { name: podcast.title })}
                 className="h-14 w-14 rounded-md"
                 loading="lazy"
                 src={podcast.imageUrl}

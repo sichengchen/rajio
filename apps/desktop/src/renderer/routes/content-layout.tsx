@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { t } from "../../shared/i18n";
+import { useLocale } from "@/lib/locale";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { BackNavigation } from "@/components/common/back-navigation";
@@ -19,38 +21,33 @@ interface ToolbarAction {
 }
 
 interface AppPageLayoutProps {
-  backTo?:
-    | "/downloaded"
-    | "/favorites"
-    | "/library"
-    | "/search"
-    | "/settings"
-    | "/whats-new";
+  backTo?: "/downloaded" | "/favorites" | "/library" | "/search" | "/settings" | "/whats-new";
   children: ReactNode;
+  centered?: boolean;
   title?: string;
   toolBar?: ToolbarAction[];
 }
 
-const mobileTabItems: MobileTabBarItem[] = [
+const mobileTabItems = (): MobileTabBarItem[] => [
   {
     id: "search",
     icon: Search,
-    label: "Search",
+    label: t("Search"),
   },
   {
     id: "whats-new",
     icon: Sparkles,
-    label: "What's New",
+    label: t("What's New"),
   },
   {
     id: "library",
     icon: Radio,
-    label: "Library",
+    label: t("Library"),
   },
   {
     id: "settings",
     icon: Settings,
-    label: "Settings",
+    label: t("Settings"),
   },
 ];
 
@@ -76,24 +73,29 @@ function getActiveTab(pathname: string) {
   return "whats-new";
 }
 
-export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayoutProps) {
+export function AppPageLayout({ backTo, children, title, toolBar, centered }: AppPageLayoutProps) {
+  useLocale();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
-  const playbackState = usePodcastStore((state) => state.playbackState);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => setScrolled(false), [location.pathname]);
+  const hasActiveEpisode = usePodcastStore((state) => !!state.playbackState.currentEpisode);
   const showAddPodcastDialog = usePodcastStore((state) => state.showAddPodcastDialog);
   const setShowAddPodcastDialog = usePodcastStore((state) => state.setShowAddPodcastDialog);
 
-  const hasActiveEpisode = !!playbackState.currentEpisode;
   const pageContent = (
     <div className="app-drag mx-auto max-w-6xl px-4 py-3">
       {title ? (
-        <div className="mt-6 flex items-center gap-3 px-2">
+        <div
+          data-page-header
+          className={`sticky top-0 z-30 -mx-4 mt-6 flex items-center gap-3 border-b ${scrolled ? "border-border/60" : "border-transparent"} bg-background/95 px-6 py-3 backdrop-blur-sm`}
+        >
           {isMobile && backTo ? (
             <BackNavigation
               className="-ml-2"
               iconOnly
-              label="Back"
+              label={t("Back")}
               onClick={() => navigate({ to: backTo })}
             />
           ) : null}
@@ -125,9 +127,33 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col">
-        {isMobile ? (
+      <div
+        className="flex h-full min-h-0 flex-col"
+        onScrollCapture={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.matches("[data-page-scroll], [data-slot=desktop-safe-scroll-viewport]"))
+            setScrolled(target.scrollTop > 0);
+        }}
+      >
+        {centered ? (
           <div
+            data-page-scroll
+            className="flex min-h-0 flex-1 overflow-y-auto p-6"
+            style={
+              isMobile
+                ? {
+                    paddingBottom: hasActiveEpisode
+                      ? "calc(10rem + env(safe-area-inset-bottom))"
+                      : "calc(4rem + env(safe-area-inset-bottom))",
+                  }
+                : undefined
+            }
+          >
+            <div className="m-auto w-full">{children}</div>
+          </div>
+        ) : isMobile ? (
+          <div
+            data-page-scroll
             className="flex-1 overflow-y-auto"
             style={{
               paddingBottom: hasActiveEpisode
@@ -145,7 +171,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
       {isMobile ? (
         <MobileTabBar
           activeTab={getActiveTab(location.pathname)}
-          items={mobileTabItems}
+          items={mobileTabItems()}
           onTabChange={(tabId) => {
             if (tabId === "search") {
               navigate({ to: "/search" });
@@ -174,11 +200,12 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
 }
 
 export function RequireSubscriptions({ children }: { children: ReactNode }) {
+  useLocale();
   const podcasts = usePodcastStore((state) => state.podcasts);
 
   if (podcasts.length === 0) {
     return (
-      <AppPageLayout>
+      <AppPageLayout centered>
         <WelcomeScreen />
       </AppPageLayout>
     );

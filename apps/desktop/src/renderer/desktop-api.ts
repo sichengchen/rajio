@@ -1,6 +1,7 @@
+import { t } from "../shared/i18n";
 import type { NewcastleApi } from "../shared/ipc";
 
-const missingDesktopServices = () => Promise.reject(new Error("Desktop services unavailable."));
+const missingDesktopServices = () => Promise.reject(new Error(t("Desktop services unavailable.")));
 
 const browserFallbackApi: NewcastleApi = {
   downloads: {

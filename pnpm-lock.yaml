@@ -65,6 +65,9 @@ importers:
       '@rajio-app/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@rajio-app/core-wasm':
+        specifier: workspace:*
+        version: link:../../packages/core-wasm
       '@tanstack/react-query':
         specifier: 5.99.1
         version: 5.99.1(react@19.1.0)
@@ -205,6 +208,8 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+
+  packages/core-wasm: {}
 
 packages:
 

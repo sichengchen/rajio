@@ -70,3 +70,31 @@ test("uses the desktop default download directory until the user chooses another
 function createTestDatabase(): LocalDatabase {
   return new LocalDatabase(path.join(mkdtempSync(path.join(tmpdir(), "newcastle-")), "test.sqlite"));
 }
+
+test("collection rules and outbox survive reopening as one transaction", async () => {
+  const filename = path.join(mkdtempSync(path.join(tmpdir(), "rajio-collections-")), "library.sqlite");
+  let db = new LocalDatabase(filename);
+  try {
+    const settings = new SettingsService(db);
+    await settings.set({ playbackQueue: JSON.stringify({ version: 1, episodeIds: ["a", "", "a", "b"] }) });
+    const canonical = db.getSettings().playbackQueue;
+    assert.deepEqual(JSON.parse(canonical!).episodeIds, ["a", "b"]);
+    assert.equal(db.listOutbox().length, 1);
+    await settings.set({ playbackQueue: canonical });
+    assert.equal(db.listOutbox().length, 1);
+    db.close();
+    db = new LocalDatabase(filename);
+    assert.equal(db.getSettings().playbackQueue, canonical);
+    assert.equal(db.listOutbox()[0].kind, "collection.queue.v1");
+    const append = db.appendOutbox.bind(db);
+    db.appendOutbox = () => { throw new Error("disk failure"); };
+    await assert.rejects(new SettingsService(db).set({
+      favoriteEpisodes: JSON.stringify({ version: 1, episodeIds: ["b"] }),
+      language: "fr",
+    }), /disk failure/);
+    db.appendOutbox = append;
+    assert.equal(db.getSettings().favoriteEpisodes, undefined);
+    assert.equal(db.getSettings().language, undefined);
+    assert.equal(db.listOutbox().length, 1);
+  } finally { db.close(); }
+});

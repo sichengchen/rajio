@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
@@ -21,6 +23,7 @@ interface AddPodcastDialogProps {
 }
 
 export function AddPodcastDialog({ open, onOpenChange }: AddPodcastDialogProps) {
+  useLocale();
   const [feedUrl, setFeedUrl] = useState("");
 
   const { subscribeToPodcast, clearError, progressDialog } = usePodcastStore();
@@ -47,9 +50,9 @@ export function AddPodcastDialog({ open, onOpenChange }: AddPodcastDialogProps) 
       await subscribeMutation.mutateAsync(feedUrl.trim());
       setFeedUrl("");
       onOpenChange(false);
-      toast.success("Podcast added successfully!");
+      toast.success(t("Podcast added successfully!"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add podcast");
+      toast.error(error instanceof Error ? error.message : t("Failed to add podcast"));
     }
   };
 
@@ -64,13 +67,13 @@ export function AddPodcastDialog({ open, onOpenChange }: AddPodcastDialogProps) 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Podcast</DialogTitle>
-          <DialogDescription>Add a podcast by RSS feed URL.</DialogDescription>
+          <DialogTitle>{t("Add Podcast")}</DialogTitle>
+          <DialogDescription>{t("Add a podcast by RSS feed URL.")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
           <div>
-            <Label htmlFor="feedUrl">RSS Feed URL</Label>
+            <Label htmlFor="feedUrl">{t("RSS Feed URL")}</Label>
             <Input
               id="feedUrl"
               type="url"
@@ -84,7 +87,7 @@ export function AddPodcastDialog({ open, onOpenChange }: AddPodcastDialogProps) 
 
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting || !feedUrl.trim()}>
-              {isSubmitting ? "Adding..." : "Add Podcast"}
+              {isSubmitting ? t("Adding...") : t("Add Podcast")}
             </Button>
           </div>
         </form>

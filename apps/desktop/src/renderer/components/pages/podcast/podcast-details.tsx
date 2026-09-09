@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { type ReactNode, useMemo } from "react";
@@ -13,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { formatDistanceToNow } from "date-fns";
+import { formatEpisodeDate } from "@/lib/utils";
 import type { Episode, Podcast } from "@/lib/types";
 import { richTextToPlainText } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ export function PodcastDetails({
   onPlayLatest,
   podcast,
 }: PodcastDetailsProps) {
+  useLocale();
   const cleanDescription = richTextToPlainText(podcast.description);
 
   // Get the latest episode for this podcast
@@ -44,10 +47,10 @@ export function PodcastDetails({
   );
 
   const updated = latestEpisode
-    ? `Updated ${formatDistanceToNow(new Date(latestEpisode.publishedAt), { addSuffix: true })}`
+    ? formatEpisodeDate(latestEpisode.publishedAt)
     : isLoadingEpisodes
       ? null
-      : "No episodes";
+      : t("No episodes");
 
   return (
     <ContentDetailsHeader
@@ -59,15 +62,13 @@ export function PodcastDetails({
           <div className="flex items-center gap-2">
             {latestEpisode ? (
               <Button
-                aria-label={`Play latest episode: ${latestEpisode.title}`}
+                aria-label={t("Play latest episode: {name}", { name: latestEpisode.title })}
                 onClick={() => onPlayLatest(latestEpisode)}
                 size="sm"
                 type="button"
                 variant="outline"
               >
-                <Play className="size-3.5" data-icon="inline-start" fill="currentColor" />
-                Latest episode
-              </Button>
+                <Play className="size-3.5" data-icon="inline-start" fill="currentColor" />{t("Latest episode")}</Button>
             ) : null}
             {updated ? <ContentMetadata className="text-sm" items={[updated]} /> : null}
           </div>
@@ -79,7 +80,7 @@ export function PodcastDetails({
             <DialogTrigger asChild>
               <Button className="size-8 md:hidden" size="icon" variant="ghost">
                 <Info className="size-4" />
-                <span className="sr-only">About this show</span>
+                <span className="sr-only">{t("About this show")}</span>
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
@@ -88,7 +89,7 @@ export function PodcastDetails({
               </DialogHeader>
               <div className="max-h-96 overflow-y-auto">
                 <DialogDescription className="whitespace-pre-wrap leading-relaxed">
-                  {cleanDescription || "No description available."}
+                  {cleanDescription || t("No description available.")}
                 </DialogDescription>
               </div>
             </DialogContent>
@@ -101,7 +102,7 @@ export function PodcastDetails({
       {cleanDescription ? (
         <Dialog>
           <DialogTrigger
-            aria-label="Show full description"
+            aria-label={t("Show full description")}
             className="hidden max-w-3xl text-left text-sm leading-5 text-muted-foreground transition-colors hover:text-foreground md:line-clamp-2"
           >
             {cleanDescription}

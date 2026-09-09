@@ -14,10 +14,14 @@ import type {
 export const ipcChannels = {
   downloads: {
     delete: "downloads:delete",
+    cancel: "downloads:cancel",
+    statuses: "downloads:statuses",
+    changed: "downloads:changed",
     start: "downloads:start",
   },
   episodes: {
     listAll: "episodes:list-all",
+    byIds: "episodes:by-ids",
     listLatest: "episodes:list-latest",
     listByPodcast: "episodes:list-by-podcast",
     listByPodcastPage: "episodes:list-by-podcast-page",
@@ -25,12 +29,17 @@ export const ipcChannels = {
   },
   library: {
     list: "library:list",
+    refreshAll: "library:refresh-all",
+    refreshState: "library:refresh-state",
+    changed: "library:changed",
     refresh: "library:refresh",
     subscribe: "library:subscribe",
     unsubscribe: "library:unsubscribe",
   },
   playback: {
     getSource: "playback:get-source",
+    checkpointRequested: "playback:checkpoint-requested",
+    checkpointReady: "playback:checkpoint-ready",
     listProgress: "playback:list-progress",
     saveProgress: "playback:save-progress",
   },
@@ -45,7 +54,11 @@ export const ipcChannels = {
 } as const;
 
 export interface NewcastleApi {
+  controls?: import("./controls").ControlsApi;
   library: {
+    refreshAll?: () => Promise<void>;
+    refreshState?: () => Promise<{ running: boolean; checkedAt?: string; failures: string[] }>;
+    onChanged?: (callback: () => void) => () => void;
     list: () => Promise<PodcastSummary[]>;
     subscribe: (feedUrl: string) => Promise<PodcastSummary>;
     unsubscribe: (podcastId: string) => Promise<void>;
@@ -53,16 +66,21 @@ export interface NewcastleApi {
   };
   episodes: {
     listAll: () => Promise<EpisodeSummary[]>;
+    byIds?: (ids: string[]) => Promise<EpisodeSummary[]>;
     listLatest: (request?: EpisodePageRequest) => Promise<EpisodePage>;
     listByPodcast: (podcastId: string) => Promise<EpisodeSummary[]>;
     listByPodcastPage: (podcastId: string, request?: EpisodePageRequest) => Promise<EpisodePage>;
     search: (request: EpisodeSearchRequest) => Promise<EpisodePage>;
   };
   downloads: {
+    cancel?: (episodeId: string) => Promise<void>;
+    statuses?: () => Promise<DownloadStatus[]>;
+    onChanged?: (callback: (status: DownloadStatus) => void) => () => void;
     start: (episodeId: string) => Promise<DownloadStatus>;
     delete: (episodeId: string) => Promise<void>;
   };
   playback: {
+    onCheckpointRequested?: (callback: () => Promise<void>) => () => void;
     getSource: (episodeId: string) => Promise<PlaybackSource>;
     listProgress: () => Promise<PlaybackProgressSummary[]>;
     saveProgress: (progress: PlaybackProgressInput) => Promise<void>;

@@ -1,3 +1,5 @@
+import { t } from "../../shared/i18n";
+import { setLanguage } from "../../shared/i18n";
 import { create } from "zustand";
 
 import { desktopApi } from "@/desktop-api";
@@ -65,13 +67,7 @@ interface ProgressDialogState {
 }
 
 interface PodcastStore {
-  currentPage:
-    | "podcasts"
-    | "whats-new"
-    | "settings"
-    | "downloaded"
-    | "favorites"
-    | "library";
+  currentPage: "podcasts" | "whats-new" | "settings" | "downloaded" | "favorites" | "library";
   downloadedEpisodes: Episode[];
   downloadProgress: Map<string, DownloadProgress>;
   episodeCache: Map<string, Episode[]>;
@@ -116,7 +112,7 @@ interface PodcastStore {
   getLatestEpisodes: () => Promise<Episode[]>;
   getUnfinishedEpisodes: () => Promise<Episode[]>;
   importFromOPML: (opmlContent: string) => Promise<{ errors: number; imported: number }>;
-  initializeStore: () => Promise<void>;
+  initializeStore: (background?: boolean) => Promise<void>;
   loadEpisodes: (podcastId: string) => Promise<void>;
   loadMoreEpisodes: (podcastId: string) => Promise<void>;
   loadMoreLatestEpisodes: () => Promise<Episode[]>;
@@ -144,13 +140,7 @@ interface PodcastStore {
   seekToTime: (time: number) => void;
   setAutoPlay: (autoPlay: boolean) => void;
   setCurrentPage: (
-    page:
-      | "podcasts"
-      | "whats-new"
-      | "settings"
-      | "downloaded"
-      | "favorites"
-      | "library",
+    page: "podcasts" | "whats-new" | "settings" | "downloaded" | "favorites" | "library",
   ) => void;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
@@ -256,6 +246,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
   },
 
   cancelDownload: async (episodeId) => {
+    await desktopApi.downloads.cancel?.(episodeId);
     const next = new Map(get().downloadProgress);
     next.delete(episodeId);
     set({ downloadProgress: next });
@@ -353,7 +344,9 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
     };
     get().updateDownloadProgress(episode.id, progress);
     try {
-      await desktopApi.downloads.start(episode.id);
+      const result = await desktopApi.downloads.start(episode.id);
+      if (result.status === "queued") return;
+      if (result.status !== "downloaded") throw new Error(result.error ?? t("Download failed"));
       get().updateDownloadProgress(episode.id, {
         ...progress,
         completedAt: new Date(),
@@ -365,7 +358,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
     } catch (error) {
       get().updateDownloadProgress(episode.id, {
         ...progress,
-        error: error instanceof Error ? error.message : "Download failed",
+        error: error instanceof Error ? error.message : t("Download failed"),
         status: "failed",
       });
       throw error;
@@ -401,7 +394,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       return get().latestEpisodes;
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to load latest episodes.",
+        error: error instanceof Error ? error.message : t("Failed to load latest episodes."),
         latestEpisodesPage: { ...get().latestEpisodesPage, isLoading: false },
       });
       return get().latestEpisodes;
@@ -424,14 +417,14 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
 
     if (feeds.length === 0) {
       set({ isImporting: false });
-      throw new Error("No podcast feeds found in OPML file");
+      throw new Error(t("No podcast feeds found in OPML file"));
     }
 
     setProgressDialog({
-      currentItem: "Preparing import...",
+      currentItem: t("Preparing import..."),
       isOpen: true,
       progress: 0,
-      title: "Importing OPML Subscriptions",
+      title: t("Importing OPML Subscriptions"),
       total: feeds.length,
     });
 
@@ -464,8 +457,8 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
     }
   },
 
-  initializeStore: async () => {
-    set({ isLoading: true });
+  initializeStore: async (background = false) => {
+    if (!background) set({ isLoading: true });
     try {
       await Promise.all([favoriteEpisodesPersistence, playbackQueuePersistence]);
       const [podcastSummaries, settings, progressSummaries] = await Promise.all([
@@ -473,6 +466,11 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
         desktopApi.settings.get(),
         desktopApi.playback.listProgress(),
       ]);
+      setLanguage(settings.language, navigator.language);
+      document.documentElement.lang =
+        settings.language === "system" || !settings.language
+          ? navigator.language
+          : settings.language;
       const podcasts = podcastSummaries.map(toPodcast);
       const favoriteEpisodeIds = parseFavoriteEpisodes(settings.favoriteEpisodes);
       const resumableEpisodeIds = progressSummaries
@@ -484,7 +482,13 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       );
       const libraryEpisodes =
         favoriteEpisodeIds.length > 0 || queueEpisodeIds.length > 0
-          ? await listLibraryEpisodes(podcasts)
+          ? desktopApi.episodes.byIds
+            ? (
+                await desktopApi.episodes.byIds([
+                  ...new Set([...favoriteEpisodeIds, ...queueEpisodeIds]),
+                ])
+              ).map(toEpisode)
+            : await listLibraryEpisodes(podcasts)
           : null;
       const episodesById = new Map(
         (libraryEpisodes ?? []).map((episode) => [episode.id, episode] as const),
@@ -548,7 +552,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       persistPlaybackQueue(playbackQueue);
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to initialize library.",
+        error: error instanceof Error ? error.message : t("Failed to initialize library."),
         isLoading: false,
       });
     }
@@ -568,7 +572,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       await loadPodcastEpisodePage(set, get, podcastId, 0);
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to load episodes.",
+        error: error instanceof Error ? error.message : t("Failed to load episodes."),
       });
       setPodcastPageState(set, get, podcastId, { isLoading: false });
     }
@@ -590,7 +594,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       await loadPodcastEpisodePage(set, get, podcastId, page.nextOffset);
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to load more episodes.",
+        error: error instanceof Error ? error.message : t("Failed to load more episodes."),
       });
       setPodcastPageState(set, get, podcastId, { isLoading: false });
     }
@@ -611,7 +615,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       await loadLatestEpisodePage(set, get, page.nextOffset);
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Failed to load more latest episodes.",
+        error: error instanceof Error ? error.message : t("Failed to load more latest episodes."),
         latestEpisodesPage: { ...get().latestEpisodesPage, isLoading: false },
       });
     }
@@ -724,9 +728,8 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
   refreshAllPodcasts: async () => {
     set({ isRefreshing: true });
     try {
-      for (const podcast of get().podcasts) {
-        await desktopApi.library.refresh(podcast.id);
-      }
+      if (desktopApi.library.refreshAll) await desktopApi.library.refreshAll();
+      else for (const podcast of get().podcasts) await desktopApi.library.refresh(podcast.id);
       await get().initializeStore();
       get().clearLatestEpisodesCache();
     } finally {
@@ -894,10 +897,10 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
   subscribeToPodcast: async (feedUrl) => {
     set({
       progressDialog: {
-        currentItem: "Getting podcast information...",
+        currentItem: t("Getting podcast information..."),
         isOpen: true,
         progress: 1,
-        title: "Adding Podcast",
+        title: t("Adding Podcast"),
         total: 3,
       },
     });

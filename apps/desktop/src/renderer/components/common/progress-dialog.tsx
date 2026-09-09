@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +13,7 @@ import {
 import { usePodcastStore } from "@/lib/store";
 
 export function ProgressDialog() {
+  useLocale();
   const { progressDialog } = usePodcastStore();
 
   const progressPercentage =
@@ -35,7 +38,7 @@ export function ProgressDialog() {
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Progress</span>
+              <span>{t("Progress")}</span>
               <span>
                 {progressDialog.progress} / {progressDialog.total}
               </span>

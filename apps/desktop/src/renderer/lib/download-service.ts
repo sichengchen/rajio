@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { desktopApi } from "@/desktop-api";
 import type { DownloadProgress, Episode, StorageStats } from "@/lib/types";
 
@@ -8,6 +9,7 @@ const progressByEpisode = new Map<string, DownloadProgress>();
 
 export class DownloadService {
   static async cancelDownload(episodeId: string) {
+    await desktopApi.downloads.cancel?.(episodeId);
     progressByEpisode.delete(episodeId);
     emit(episodeId, undefined);
   }
@@ -55,7 +57,18 @@ export class DownloadService {
     };
     progressByEpisode.set(episode.id, started);
     emit(episode.id, started);
-    await desktopApi.downloads.start(episode.id);
+    const result = await desktopApi.downloads.start(episode.id);
+    if (result.status === "queued") return;
+    if (result.status !== "downloaded") {
+      const failed: DownloadProgress = {
+        ...started,
+        status: "failed",
+        error: result.error ?? t("Download failed"),
+      };
+      progressByEpisode.set(episode.id, failed);
+      emit(episode.id, failed);
+      throw new Error(failed.error);
+    }
     const completed: DownloadProgress = {
       ...started,
       completedAt: new Date(),

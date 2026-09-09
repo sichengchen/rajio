@@ -1,3 +1,6 @@
+import { t } from "../shared/i18n";
+import { existsSync } from "node:fs";
+import { applyLibrary } from "@rajio-app/core-wasm/node";
 import { pathToFileURL } from "node:url";
 
 import type {
@@ -13,10 +16,10 @@ export class PlaybackService {
   async getSource(episodeId: string): Promise<PlaybackSource> {
     const episode = this.db.getEpisode(episodeId);
     if (!episode) {
-      throw new Error("Episode not found");
+      throw new Error(t("Episode not found"));
     }
 
-    if (episode.downloadedPath) {
+    if (episode.downloadedPath && existsSync(episode.downloadedPath)) {
       return {
         episodeId,
         isLocal: true,
@@ -24,6 +27,7 @@ export class PlaybackService {
       };
     }
 
+    if (episode.downloadedPath) this.db.clearDownloadedEpisode(episodeId);
     return {
       episodeId,
       isLocal: false,
@@ -38,23 +42,32 @@ export class PlaybackService {
   async saveProgress(progress: PlaybackProgressInput): Promise<void> {
     const episode = this.db.getEpisode(progress.episodeId);
     const podcast = this.db.getPodcast(progress.podcastId);
-    if (!episode || !podcast) {
-      throw new Error("Episode not found");
+    if (!episode || !podcast || episode.podcastId !== podcast.id) {
+      throw new Error(t("Episode not found"));
     }
 
-    this.db.savePlaybackProgress(progress);
     const now = new Date().toISOString();
-    this.db.appendOutbox("playback.checkpoint", {
-      currentTime: progress.currentTime,
+    const checkpoint = applyLibrary({
+      kind: "checkpoint",
+      episodeId: progress.episodeId,
+      position: progress.currentTime,
       duration: progress.duration,
-      isCompleted: progress.isCompleted,
-      lastPlayedAt: now,
-      locator: {
-        audioUrl: episode.audioUrl,
-        episodeGuid: episode.guid,
-        feedUrl: podcast.feedUrl,
-      },
       updatedAt: now,
+    });
+    this.db.transaction(() => {
+      this.db.savePlaybackProgress({ ...progress, currentTime: checkpoint.position });
+      this.db.appendOutbox("playback.checkpoint", {
+        currentTime: checkpoint.position,
+        duration: progress.duration,
+        isCompleted: progress.isCompleted,
+        lastPlayedAt: now,
+        locator: {
+          audioUrl: episode.audioUrl,
+          episodeGuid: episode.guid,
+          feedUrl: podcast.feedUrl,
+        },
+        updatedAt: now,
+      });
     });
   }
 }

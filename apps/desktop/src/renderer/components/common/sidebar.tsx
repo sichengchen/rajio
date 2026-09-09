@@ -1,17 +1,10 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Plus,
-  Radio,
-  Search,
-  RefreshCw,
-  Settings,
-  Sparkles,
-  Download,
-  Heart,
-} from "lucide-react";
+import { Plus, Radio, Search, Settings, Sparkles, Download, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CoverImage } from "@/components/ui/cover-image";
@@ -27,35 +20,36 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // Menu items
-const menuItems = [
+const menuItems = () => [
   {
-    title: "Search",
+    title: t("Search"),
     icon: Search,
     to: "/search" as const,
   },
   {
-    title: "What's New",
+    title: t("What's New"),
     icon: Sparkles,
     to: "/whats-new" as const,
   },
   {
-    title: "Downloaded",
+    title: t("Downloaded"),
     icon: Download,
     to: "/downloaded" as const,
   },
   {
-    title: "Favorites",
+    title: t("Favorites"),
     icon: Heart,
     to: "/favorites" as const,
   },
   {
-    title: "Settings",
+    title: t("Settings"),
     icon: Settings,
     to: "/settings" as const,
   },
 ];
 
 export function PodcastSidebar() {
+  useLocale();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -63,7 +57,6 @@ export function PodcastSidebar() {
   const currentPage = usePodcastStore((state) => state.currentPage);
   const isLoading = usePodcastStore((state) => state.isLoading);
   const isRefreshing = usePodcastStore((state) => state.isRefreshing);
-  const refreshAllPodcasts = usePodcastStore((state) => state.refreshAllPodcasts);
   const refreshPodcast = usePodcastStore((state) => state.refreshPodcast);
   const setSelectedPodcast = usePodcastStore((state) => state.setSelectedPodcast);
   const setShowAddPodcastDialog = usePodcastStore((state) => state.setShowAddPodcastDialog);
@@ -76,21 +69,12 @@ export function PodcastSidebar() {
     ? decodeURIComponent(location.pathname.replace("/podcast/", ""))
     : null;
 
-  const handleRefreshAll = async () => {
-    try {
-      await refreshAllPodcasts();
-      toast.success("Podcasts refreshed successfully!");
-    } catch {
-      toast.error("Failed to refresh podcasts");
-    }
-  };
-
   const handleRefreshPodcast = async (podcast: Podcast) => {
     try {
       await refreshPodcast(podcast.id);
-      toast.success(`Updated ${podcast.title}`);
+      toast.success(t("Updated {name}", { name: podcast.title }));
     } catch {
-      toast.error(`Failed to update ${podcast.title}`);
+      toast.error(t("Failed to update {name}", { name: podcast.title }));
     }
   };
 
@@ -114,9 +98,9 @@ export function PodcastSidebar() {
         }
       }
 
-      toast.success(`Removed ${podcast.title}`);
+      toast.success(t("Removed {name}", { name: podcast.title }));
     } catch {
-      toast.error(`Failed to remove ${podcast.title}`);
+      toast.error(t("Failed to remove {name}", { name: podcast.title }));
     } finally {
       setIsRemoving(false);
     }
@@ -133,12 +117,10 @@ export function PodcastSidebar() {
           {/* Fixed sections */}
           <div className="flex-shrink-0">
             <div className="relative flex w-full min-w-0 flex-col p-2">
-              <div className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium">
-                Menu
-              </div>
+              <div className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium">{t("Menu")}</div>
               <div className="w-full text-sm">
                 <ul className="flex w-full min-w-0 flex-col gap-1">
-                  {menuItems.map((item) => {
+                  {menuItems().map((item) => {
                     const isEpisodeDetail = location.pathname.startsWith("/episode/");
                     const isActive =
                       location.pathname === item.to ||
@@ -177,19 +159,9 @@ export function PodcastSidebar() {
             <div className="relative flex w-full min-w-0 flex-col p-2">
               <div className="flex items-center justify-between h-8 px-2 min-w-0">
                 <div className="text-sidebar-foreground/70 ring-sidebar-ring p-0 flex-1 min-w-0 text-xs font-medium">
-                  <span className="truncate">Podcasts ({podcasts.length})</span>
+                  <span className="truncate">{t("Podcasts ({count})", { count: podcasts.length })}</span>
                 </div>
                 <div className="-mr-2.5 flex flex-shrink-0 gap-1">
-                  <Button
-                    onClick={handleRefreshAll}
-                    size="sm"
-                    variant="ghost"
-                    disabled={isRefreshing}
-                    className="flex-shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
-                    <span className="sr-only">Refresh podcasts</span>
-                  </Button>
                   <Button
                     onClick={() => setShowAddPodcastDialog(true)}
                     size="sm"
@@ -197,7 +169,7 @@ export function PodcastSidebar() {
                     className="flex-shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
                   >
                     <Plus className="h-3 w-3" />
-                    <span className="sr-only">Add podcast</span>
+                    <span className="sr-only">{t("Add podcast")}</span>
                   </Button>
                 </div>
               </div>
@@ -215,13 +187,13 @@ export function PodcastSidebar() {
                   <div className="h-6 w-6 mx-auto mb-4 animate-spin">
                     <div className="h-full w-full border-2 border-current border-t-transparent rounded-full" />
                   </div>
-                  <p className="text-sm">Loading podcasts...</p>
+                  <p className="text-sm">{t("Loading podcasts...")}</p>
                 </div>
               ) : podcasts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground px-2 min-w-0 max-w-full">
                   <Radio className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="truncate">No podcasts yet</p>
-                  <p className="text-sm truncate">Add your first podcast to get started</p>
+                  <p className="truncate">{t("No podcasts yet")}</p>
+                  <p className="text-sm truncate">{t("Add your first podcast to get started")}</p>
                 </div>
               ) : (
                 <ul className="flex w-full min-w-0 flex-col gap-1">

@@ -1,23 +1,10 @@
-import { XMLParser } from "fast-xml-parser";
-
+import { parseFeed } from "@rajio-app/core-wasm/node";
 import type { EpisodeSummary, PodcastSummary } from "../shared/types";
 import { APP_VERSION } from "../shared/version";
-
-interface ParsedFeed {
+export interface ParsedFeed {
   episodes: EpisodeSummary[];
   podcast: PodcastSummary;
 }
-
-type XmlNode = Record<string, unknown>;
-
-const parser = new XMLParser({
-  attributeNamePrefix: "",
-  cdataPropName: "#cdata",
-  ignoreAttributes: false,
-  parseTagValue: false,
-  textNodeName: "#text",
-  trimValues: true,
-});
 
 const feedRequestHeaders = {
   Accept: [
@@ -33,260 +20,37 @@ const feedRequestHeaders = {
 
 export class RssService {
   async fetchFeed(feedUrl: string): Promise<ParsedFeed> {
+    const result = await this.fetchConditional(feedUrl, {});
+    if (!result.feed) throw new Error("Unexpected empty feed response");
+    return result.feed;
+  }
+
+  async fetchConditional(
+    feedUrl: string,
+    validators: { etag?: string; modified?: string },
+  ): Promise<{ feed?: ParsedFeed; etag?: string; modified?: string }> {
     const normalizedFeedUrl = new URL(feedUrl).toString();
     const response = await fetch(normalizedFeedUrl, {
-      headers: feedRequestHeaders,
+      headers: {
+        ...feedRequestHeaders,
+        ...(validators.etag ? { "If-None-Match": validators.etag } : {}),
+        ...(validators.modified ? { "If-Modified-Since": validators.modified } : {}),
+      },
+      signal: AbortSignal.timeout(30_000),
     });
-
+    const http = {
+      etag: response.headers.get("etag") ?? validators.etag,
+      modified: response.headers.get("last-modified") ?? validators.modified,
+    };
+    if (response.status === 304) return http;
     if (!response.ok) {
       const statusText = response.statusText ? ` ${response.statusText}` : "";
       throw new Error(`Feed request failed with HTTP ${response.status}${statusText}`);
     }
-
-    return this.parseFeed(normalizedFeedUrl, await response.text());
+    return { ...http, feed: this.parseFeed(normalizedFeedUrl, await response.text()) };
   }
 
   parseFeed(feedUrl: string, xml: string): ParsedFeed {
-    if (!xml.trim()) {
-      throw new Error("RSS feed is empty");
-    }
-
-    const document = parser.parse(xml) as XmlNode;
-    const root = selectObject(document, ["rss", "rdf:RDF", "feed"]) ?? document;
-    const channel = selectObject(root, ["channel", "feed"]) ?? root;
-    const items = selectArray(channel, ["item", "entry"]);
-    const now = new Date().toISOString();
-    const podcastId = generatePodcastId(feedUrl);
-    const feedImage = extractImage(channel, feedUrl);
-
-    const podcast: PodcastSummary = {
-      author: firstText(channel, ["itunes:author", "author", "managingEditor"]),
-      description: toPlainText(firstText(channel, ["description", "subtitle", "summary"])) ?? "",
-      feedUrl,
-      id: podcastId,
-      imageUrl: feedImage,
-      language: firstText(channel, ["language"]),
-      lastUpdated: now,
-      subscriptionDate: now,
-      title: firstText(channel, ["title"]) ?? new URL(feedUrl).hostname,
-    };
-
-    const episodes = items
-      .map((item, index) => toEpisodeSummary(item, podcastId, index, feedImage, feedUrl))
-      .filter((episode) => episode.audioUrl.length > 0);
-
-    return { episodes, podcast };
+    return parseFeed({ feedUrl, xml, fetchedAt: new Date().toISOString() });
   }
-}
-
-function toEpisodeSummary(
-  item: XmlNode,
-  podcastId: string,
-  index: number,
-  fallbackImage: string | undefined,
-  feedUrl: string,
-): EpisodeSummary {
-  const audioUrl = extractAudioUrl(item);
-  const guid = firstText(item, ["guid", "id"]);
-
-  return {
-    audioUrl,
-    content: firstText(item, ["content:encoded", "content", "summary", "description"]),
-    description: toPlainText(firstText(item, ["description", "summary", "content"])) ?? "",
-    duration: parseDuration(firstText(item, ["itunes:duration", "duration"])),
-    guid,
-    id: generateEpisodeId(podcastId, audioUrl || guid || String(index), index),
-    imageUrl: extractImage(item, feedUrl) ?? fallbackImage,
-    podcastId,
-    publishedAt: parseDate(firstText(item, ["pubDate", "published", "updated"])),
-    title: firstText(item, ["title"]) ?? "Untitled Episode",
-  };
-}
-
-function selectObject(root: XmlNode, names: string[]): XmlNode | undefined {
-  for (const name of names) {
-    const value = root[name];
-    if (isObject(value)) {
-      return value;
-    }
-  }
-
-  return undefined;
-}
-
-function selectArray(root: XmlNode, names: string[]): XmlNode[] {
-  for (const name of names) {
-    const value = root[name];
-    if (Array.isArray(value)) {
-      return value.filter(isObject);
-    }
-    if (isObject(value)) {
-      return [value];
-    }
-  }
-
-  return [];
-}
-
-function firstText(root: XmlNode, names: string[]): string | undefined {
-  for (const name of names) {
-    const value = root[name];
-    const text = textValue(value);
-    if (text) {
-      return text;
-    }
-  }
-
-  return undefined;
-}
-
-function textValue(value: unknown): string | undefined {
-  if (typeof value === "string") {
-    return value.trim() || undefined;
-  }
-
-  if (typeof value === "number") {
-    return String(value);
-  }
-
-  if (isObject(value)) {
-    return textValue(value["#cdata"]) ?? textValue(value["#text"]) ?? textValue(value.href);
-  }
-
-  return undefined;
-}
-
-function extractAudioUrl(item: XmlNode): string {
-  const enclosure = item.enclosure;
-  if (Array.isArray(enclosure)) {
-    const match = enclosure.find(isObject);
-    const url = match ? textValue(match.url) : undefined;
-    if (url) {
-      return url;
-    }
-  }
-
-  if (isObject(enclosure)) {
-    const url = textValue(enclosure.url);
-    if (url) {
-      return url;
-    }
-  }
-
-  const links = selectArray(item, ["link"]);
-  for (const link of links) {
-    if (textValue(link.rel) === "enclosure") {
-      const href = textValue(link.href);
-      if (href) {
-        return href;
-      }
-    }
-  }
-
-  const media = selectArray(item, ["media:content", "content"]);
-  for (const entry of media) {
-    const url = textValue(entry.url);
-    if (url) {
-      return url;
-    }
-  }
-
-  return firstText(item, ["link"]) ?? "";
-}
-
-function extractImage(root: XmlNode, baseUrl: string): string | undefined {
-  const image = root["itunes:image"] ?? root["media:thumbnail"] ?? root.image;
-  if (isObject(image)) {
-    return resolveUrl(textValue(image.href) ?? textValue(image.url), baseUrl);
-  }
-
-  if (Array.isArray(image)) {
-    for (const entry of image) {
-      if (isObject(entry)) {
-        const value = resolveUrl(textValue(entry.href) ?? textValue(entry.url), baseUrl);
-        if (value) {
-          return value;
-        }
-      }
-    }
-  }
-
-  return resolveUrl(textValue(image), baseUrl);
-}
-
-function resolveUrl(value: string | undefined, baseUrl: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  try {
-    return new URL(value, baseUrl).toString();
-  } catch {
-    return value;
-  }
-}
-
-function parseDate(value?: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? undefined : new Date(timestamp).toISOString();
-}
-
-function parseDuration(value?: string): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (/^\d+$/.test(value)) {
-    return Number(value);
-  }
-
-  const segments = value.split(":").map((segment) => Number(segment));
-  if (segments.some(Number.isNaN)) {
-    return undefined;
-  }
-
-  if (segments.length === 3) {
-    return segments[0] * 3600 + segments[1] * 60 + segments[2];
-  }
-
-  if (segments.length === 2) {
-    return segments[0] * 60 + segments[1];
-  }
-
-  return undefined;
-}
-
-function toPlainText(value?: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const stripped = value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-  return stripped || undefined;
-}
-
-function generatePodcastId(feedUrl: string): string {
-  return `podcast_${hash(feedUrl)}`;
-}
-
-function generateEpisodeId(podcastId: string, audioUrl: string, index: number): string {
-  return `episode_${hash(`${podcastId}:${audioUrl}:${index}`)}`;
-}
-
-function hash(value: string): string {
-  let hashValue = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hashValue = (hashValue << 5) - hashValue + value.charCodeAt(index);
-    hashValue |= 0;
-  }
-
-  return String(Math.abs(hashValue));
-}
-
-function isObject(value: unknown): value is XmlNode {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

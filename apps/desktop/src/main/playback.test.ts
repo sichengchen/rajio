@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -20,11 +20,16 @@ test("returns local or remote playback sources and rejects missing episodes", as
       source: "https://cdn.example/episode.mp3",
     });
 
-    db.markEpisodeDownloaded("episode_1", "/tmp/downloaded.mp3", 123);
+    const downloaded = path.join(
+      mkdtempSync(path.join(tmpdir(), "rajio-audio-")),
+      "downloaded.mp3",
+    );
+    writeFileSync(downloaded, "audio");
+    db.markEpisodeDownloaded("episode_1", downloaded, 5);
     assert.deepEqual(await playback.getSource("episode_1"), {
       episodeId: "episode_1",
       isLocal: true,
-      source: pathToFileURL("/tmp/downloaded.mp3").toString(),
+      source: pathToFileURL(downloaded).toString(),
     });
 
     await assert.rejects(playback.getSource("missing"), /Episode not found/);
@@ -160,3 +165,31 @@ function seedEpisode(db: LocalDatabase): void {
     },
   ]);
 }
+
+test("invalid progress and failed outbox writes leave the previous checkpoint intact", async () => {
+  const db = createTestDatabase();
+  seedEpisode(db);
+  const playback = new PlaybackService(db);
+  const progress = {
+    episodeId: "episode_1",
+    podcastId: "podcast_1",
+    currentTime: 10,
+    duration: 100,
+    isCompleted: false,
+  };
+  try {
+    await playback.saveProgress(progress);
+    await assert.rejects(
+      playback.saveProgress({ ...progress, currentTime: -1 }),
+      /Invalid playback/,
+    );
+    db.appendOutbox = () => {
+      throw new Error("Injected outbox failure");
+    };
+    await assert.rejects(playback.saveProgress({ ...progress, currentTime: 20 }), /Injected/);
+    assert.equal(db.getPlaybackProgress("episode_1")?.currentTime, 10);
+    assert.equal(db.listOutbox().length, 1);
+  } finally {
+    db.close();
+  }
+});

@@ -1,3 +1,4 @@
+import { applyLibrary } from "@rajio-app/core-wasm/node";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
@@ -22,7 +23,17 @@ export interface SyncOutboxEntry {
   updatedAt: string;
 }
 
+export interface FeedHTTPState {
+  etag?: string;
+  modified?: string;
+  checkedAt: number;
+  nextAttempt: number;
+  failures: number;
+  error?: string;
+}
+
 export const localDatabaseSchema = [
+  `CREATE TABLE IF NOT EXISTS feed_http (podcast_id TEXT PRIMARY KEY REFERENCES podcasts(id) ON DELETE CASCADE, record TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS podcasts (
     id TEXT PRIMARY KEY,
     feed_url TEXT NOT NULL UNIQUE,
@@ -97,6 +108,24 @@ export class LocalDatabase {
     }
   }
 
+  getFeedHTTP(podcastId: string): FeedHTTPState | undefined {
+    const row = this.db
+      .prepare("SELECT record FROM feed_http WHERE podcast_id=?")
+      .get(podcastId) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : undefined;
+  }
+  saveFeedHTTP(podcastId: string, state: FeedHTTPState): void {
+    this.db
+      .prepare(
+        "INSERT INTO feed_http VALUES (?, ?) ON CONFLICT(podcast_id) DO UPDATE SET record=excluded.record",
+      )
+      .run(podcastId, JSON.stringify(state));
+  }
+
+  transaction<T>(operation: () => T): T {
+    return this.db.transaction(operation)();
+  }
+
   close(): void {
     this.db.close();
   }
@@ -133,15 +162,15 @@ export class LocalDatabase {
       .map((row) => String((row as Row).image_url));
   }
 
-  listEpisodeArtworkUrls(): string[] {
+  listEpisodeArtworkUrls(limit = 24): string[] {
     return this.db
       .prepare(
         `SELECT image_url
         FROM episodes
         WHERE image_url IS NOT NULL AND TRIM(image_url) <> ''
-        ORDER BY published_at DESC, id DESC`,
+        ORDER BY published_at DESC, id DESC LIMIT ?`,
       )
-      .all()
+      .all(limit)
       .map((row) => String((row as Row).image_url));
   }
 
@@ -430,6 +459,19 @@ export class LocalDatabase {
     return toEpisodePage(rows, page, total);
   }
 
+  listEpisodesByIds(ids: string[]): EpisodeSummary[] {
+    if (!Array.isArray(ids) || ids.length > 1000 || ids.some((id) => typeof id !== "string"))
+      throw new Error("Invalid episode selection");
+    const unique = [...new Set(ids)];
+    if (!unique.length) return [];
+    const rows = this.db
+      .prepare(`SELECT * FROM episodes WHERE id IN (${unique.map(() => "?").join(",")})`)
+      .all(...unique)
+      .map(toEpisodeSummary);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return unique.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+  }
+
   getEpisode(episodeId: string): EpisodeSummary | null {
     const row = this.db
       .prepare(
@@ -536,6 +578,47 @@ export class LocalDatabase {
     }
   }
 
+  reconcileEpisodes(podcastId: string, incoming: EpisodeSummary[]): void {
+    const existing = this.db
+      .prepare(
+        "SELECT id, podcast_id, audio_url, guid, title FROM episodes WHERE podcast_id=? ORDER BY rowid",
+      )
+      .all(podcastId)
+      .map(toEpisodeSummary);
+    const plan = applyLibrary({ kind: "reconcileEpisodes", incoming, existing });
+    this.upsertEpisodes(plan.episodes);
+    for (const [old, canonical] of Object.entries(plan.aliases)) {
+      this.db
+        .prepare(`INSERT INTO playback_progress SELECT ?, podcast_id, "current_time", duration, is_completed, last_played_at FROM playback_progress WHERE episode_id=?
+        ON CONFLICT(episode_id) DO UPDATE SET "current_time"=excluded."current_time", duration=excluded.duration, is_completed=excluded.is_completed, last_played_at=excluded.last_played_at WHERE excluded.last_played_at > playback_progress.last_played_at`)
+        .run(canonical, old);
+      this.db
+        .prepare(
+          `UPDATE episodes SET downloaded_path=(SELECT downloaded_path FROM episodes WHERE id=?), file_size=(SELECT file_size FROM episodes WHERE id=?), downloaded_at=(SELECT downloaded_at FROM episodes WHERE id=?) WHERE id=? AND downloaded_path IS NULL`,
+        )
+        .run(old, old, old, canonical);
+      // Persisted renderer collections store episode IDs in JSON arrays/objects.
+      const preferences = this.db.prepare("SELECT key, value FROM preferences").all() as {
+        key: string;
+        value: string;
+      }[];
+      for (const preference of preferences) {
+        try {
+          const replaced = JSON.stringify(JSON.parse(preference.value), (_key, value) =>
+            value === old ? canonical : value,
+          );
+          if (replaced !== preference.value)
+            this.db
+              .prepare("UPDATE preferences SET value=? WHERE key=?")
+              .run(replaced, preference.key);
+        } catch {
+          /* Non-JSON preferences do not contain episode collections. */
+        }
+      }
+      this.db.prepare("DELETE FROM episodes WHERE id=?").run(old);
+    }
+  }
+
   savePlaybackProgress(progress: PlaybackProgressInput): void {
     const lastPlayedAt = new Date().toISOString();
     this.db
@@ -616,6 +699,18 @@ export class LocalDatabase {
       lastPlayedAt: requireString(row, "last_played_at"),
       podcastId: requireString(row, "podcast_id"),
     }));
+  }
+
+  downloadedBytes(): number {
+    return Number(
+      (
+        this.db
+          .prepare(
+            "SELECT COALESCE(SUM(file_size),0) AS total FROM episodes WHERE downloaded_path IS NOT NULL",
+          )
+          .get() as { total: number }
+      ).total,
+    );
   }
 
   getDownloadStatus(episodeId: string): DownloadStatus {

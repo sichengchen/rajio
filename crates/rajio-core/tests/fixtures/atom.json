@@ -1,0 +1,29 @@
+{
+  "request": {
+    "feedUrl": "https://example.com/atom.xml",
+    "xml": "<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>Atom Podcast</title><subtitle>Conversations</subtitle><entry><id>urn:episode:1</id><title>Episode</title><updated>2026-06-01T12:00:00+02:00</updated><summary>Summary</summary><link rel=\"alternate\" href=\"https://example.com/episode\"/><link rel=\"enclosure\" href=\"https://example.com/atom.mp3\"/></entry></feed>",
+    "fetchedAt": "2026-09-05T00:00:00.000Z"
+  },
+  "expected": {
+    "episodes": [
+      {
+        "audioUrl": "https://example.com/atom.mp3",
+        "content": "Summary",
+        "description": "Summary",
+        "guid": "urn:episode:1",
+        "id": "episode_1985579930",
+        "podcastId": "podcast_1955928549",
+        "publishedAt": "2026-06-01T10:00:00.000Z",
+        "title": "Episode"
+      }
+    ],
+    "podcast": {
+      "description": "Conversations",
+      "feedUrl": "https://example.com/atom.xml",
+      "id": "podcast_1955928549",
+      "lastUpdated": "2026-09-05T00:00:00.000Z",
+      "subscriptionDate": "2026-09-05T00:00:00.000Z",
+      "title": "Atom Podcast"
+    }
+  }
+}

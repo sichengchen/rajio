@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
@@ -77,7 +79,7 @@ function useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete }: Ep
     try {
       await setEpisodeListened(episode, listened);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update listened status");
+      toast.error(error instanceof Error ? error.message : t("Failed to update listened status"));
     }
   };
 
@@ -88,10 +90,10 @@ function useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete }: Ep
       await downloadEpisode(episode);
       setIsDownloaded(true);
       await onDownloadComplete?.();
-      toast.success("Episode downloaded");
+      toast.success(t("Episode downloaded"));
     } catch (error) {
       setDownloadFailed(true);
-      toast.error(error instanceof Error ? error.message : "Failed to download episode");
+      toast.error(error instanceof Error ? error.message : t("Failed to download episode"));
     } finally {
       setIsDownloading(false);
     }
@@ -103,9 +105,9 @@ function useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete }: Ep
       setIsDownloaded(false);
       setRemoveDialogOpen(false);
       await onDeleteComplete?.();
-      toast.success("Download removed");
+      toast.success(t("Download removed"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove download");
+      toast.error(error instanceof Error ? error.message : t("Failed to remove download"));
     }
   };
 
@@ -138,6 +140,7 @@ function EpisodeMenuItems({
   currentEpisodeId?: string;
   episode: Episode;
 }) {
+  useLocale();
   const Item = context ? ContextMenuItem : DropdownMenuItem;
   const CheckboxItem = context ? ContextMenuCheckboxItem : DropdownMenuCheckboxItem;
   const Group = context ? ContextMenuGroup : DropdownMenuGroup;
@@ -147,36 +150,30 @@ function EpisodeMenuItems({
     <>
       <Group>
         <Item disabled={currentEpisodeId === episode.id} onSelect={actions.handlePlayNext}>
-          <ListPlus />
-          Play Next
-        </Item>
+          <ListPlus />{t("Play Next")}</Item>
         <Item onSelect={actions.toggleFavoriteEpisode}>
           <Heart className={actions.isFavorite ? "fill-current" : undefined} />
-          {actions.isFavorite ? "Remove from Favorites" : "Save to Favorites"}
+          {actions.isFavorite ? t("Remove from Favorites") : t("Save to Favorites")}
         </Item>
         <CheckboxItem
           checked={actions.isListened}
           onCheckedChange={(checked) => void actions.handleListenedChange(checked)}
         >
-          <CircleCheck />
-          Listened
-        </CheckboxItem>
+          <CircleCheck />{t("Listened")}</CheckboxItem>
       </Group>
       <Separator />
       <Group>
         {actions.isDownloaded ? (
           <Item onSelect={() => actions.setRemoveDialogOpen(true)}>
-            <Trash2 />
-            Remove Download
-          </Item>
+            <Trash2 />{t("Remove Download")}</Item>
         ) : (
           <Item disabled={actions.isDownloading} onSelect={() => void actions.handleDownload()}>
             {actions.downloadFailed ? <RotateCcw /> : <Download />}
             {actions.isDownloading
               ? "Downloading…"
               : actions.downloadFailed
-                ? "Retry Download"
-                : "Download"}
+                ? t("Retry Download")
+                : t("Download")}
           </Item>
         )}
       </Group>
@@ -185,26 +182,23 @@ function EpisodeMenuItems({
 }
 
 function RemoveDownloadDialog({ actions }: { actions: EpisodeActionsState }) {
+  useLocale();
   return (
     <AlertDialog onOpenChange={actions.setRemoveDialogOpen} open={actions.removeDialogOpen}>
       <AlertDialogContent onClick={(event) => event.stopPropagation()}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove this download?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The episode will remain in your library and can be downloaded again later.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t("Remove this download?")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("The episode will remain in your library and can be downloaded again later.")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-white hover:bg-destructive/90"
             onClick={(event) => {
               event.preventDefault();
               void actions.handleRemoveDownload();
             }}
-          >
-            Remove
-          </AlertDialogAction>
+          >{t("Remove")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -219,6 +213,7 @@ export function EpisodeActionsMenu({
   onOpenChange,
   open,
 }: EpisodeActionsMenuProps) {
+  useLocale();
   const actions = useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete });
 
   return (
@@ -226,10 +221,10 @@ export function EpisodeActionsMenu({
       <DropdownMenu onOpenChange={onOpenChange} open={open}>
         <DropdownMenuTrigger asChild>
           <Button
-            aria-label={`More actions for ${episode.title}`}
+            aria-label={t("More actions for {name}", { name: episode.title })}
             className="size-7 text-muted-foreground opacity-70 group-hover:opacity-100 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[state=open]:opacity-100"
             size="icon"
-            title={`More actions for ${episode.title}`}
+            title={t("More actions for {name}", { name: episode.title })}
             type="button"
             variant="ghost"
           >
@@ -256,6 +251,7 @@ export function EpisodeActionsContextMenu({
   onDeleteComplete,
   onDownloadComplete,
 }: EpisodeActionsContextMenuProps) {
+  useLocale();
   const actions = useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete });
 
   return (

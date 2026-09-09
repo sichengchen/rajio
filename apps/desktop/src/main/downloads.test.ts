@@ -188,3 +188,63 @@ function seedEpisode(
     },
   ]);
 }
+
+test("cancellation removes partial files and a retry can complete", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "rajio-cancel-"));
+  const db = new LocalDatabase(path.join(root, "test.sqlite"));
+  seedEpisode(db);
+  const original = globalThis.fetch;
+  let begin!: () => void;
+  const started = new Promise<void>((resolve) => {
+    begin = resolve;
+  });
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([1, 2, 3]));
+          begin();
+        },
+      }),
+      { status: 200 },
+    );
+  const service = new DownloadService(db, () => path.join(root, "downloads"));
+  try {
+    const pending = service.start("episode_1");
+    await started;
+    await service.cancel("episode_1");
+    assert.equal((await pending).status, "queued");
+    assert.equal(db.getEpisode("episode_1")?.downloadedPath, undefined);
+    globalThis.fetch = async () => new Response(new Uint8Array([4, 5, 6]));
+    assert.equal((await service.start("episode_1")).status, "downloaded");
+  } finally {
+    globalThis.fetch = original;
+    db.close();
+  }
+});
+
+test("quota failures and missing files remain recoverable after restart", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "rajio-quota-"));
+  const db = new LocalDatabase(path.join(root, "test.sqlite"));
+  seedEpisode(db);
+  db.setSettings({ downloadLimitBytes: "2" });
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response(new Uint8Array([1, 2, 3]));
+  try {
+    const service = new DownloadService(db, () => path.join(root, "downloads"));
+    const failure = await service.start("episode_1");
+    assert.equal(failure.status, "failed");
+    assert.match(failure.error ?? "", /storage limit/);
+    db.setSettings({ downloadLimitBytes: "100" });
+    const complete = await service.start("episode_1");
+    assert.equal(complete.status, "downloaded");
+    await import("node:fs/promises").then((fs) => fs.rm(complete.downloadedPath!));
+    const restarted = new DownloadService(db, () => path.join(root, "downloads"));
+    assert.equal(db.getEpisode("episode_1")?.downloadedPath, undefined);
+    assert.equal(restarted.statuses()[0]?.status, "failed");
+    assert.equal((await new PlaybackService(db).getSource("episode_1")).isLocal, false);
+  } finally {
+    globalThis.fetch = original;
+    db.close();
+  }
+});

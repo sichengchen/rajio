@@ -1,9 +1,11 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useCanGoBack, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 
-import { BackNavigation } from "@/components/common/back-navigation";
+import { PageNavigation } from "@/components/common/page-navigation";
 import { ContentDetailsHeader } from "@/components/common/content-details-header";
 import { EpisodeActionsMenu } from "@/components/common/episode-list/episode-actions-menu";
 import { EpisodePlaybackButton } from "@/components/common/episode-list/episode-playback-button";
@@ -19,7 +21,11 @@ interface EpisodePageProps {
 }
 
 export function EpisodePage({ episodeId }: EpisodePageProps) {
+  useLocale();
   const navigate = useNavigate();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const previousPageTitle = useLocation({ select: (location) => location.state.previousPageTitle });
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -49,6 +55,26 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
     };
   }, [episodeId, getEpisode]);
 
+  const podcast = podcasts.find((item) => item.id === episode?.podcastId);
+  const backTitle = (canGoBack ? previousPageTitle : undefined) ?? podcast?.title ?? t("What's New");
+  const handleBack = () => {
+    if (canGoBack) {
+      router.history.back();
+      return;
+    }
+
+    if (podcast) {
+      void navigate({
+        params: { podcastId: podcast.id },
+        to: "/podcast/$podcastId",
+        replace: true,
+      });
+      return;
+    }
+
+    void navigate({ to: "/whats-new", replace: true });
+  };
+
   if (isLoading) {
     return <EpisodePageSkeleton />;
   }
@@ -57,30 +83,18 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
     return (
       <div className="flex min-h-[28rem] items-center justify-center px-6 text-center">
         <div>
-          <p className="font-medium">Episode unavailable</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            It may have been removed from the podcast feed.
-          </p>
-          <Button className="mt-4" onClick={() => navigate({ to: "/whats-new" })} size="sm">
-            Back to What&apos;s New
+          <p className="font-medium">{t("Episode unavailable")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("It may have been removed from the podcast feed.")}</p>
+          <Button className="mt-4" onClick={handleBack} size="sm">
+            {t("Back to {name}", { name: backTitle })}
           </Button>
         </div>
       </div>
     );
   }
 
-  const podcast = podcasts.find((item) => item.id === episode.podcastId);
   const progress = playbackProgress.get(episode.id);
   const showNotes = episode.showNotes || episode.content || episode.description;
-
-  const handleBack = () => {
-    if (podcast) {
-      navigate({ params: { podcastId: podcast.id }, to: "/podcast/$podcastId" });
-      return;
-    }
-
-    navigate({ to: "/whats-new" });
-  };
 
   const handleSeek = (seconds: number) => {
     if (currentEpisodeId !== episode.id) {
@@ -94,13 +108,7 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
 
   return (
     <article className="mx-auto max-w-4xl pb-12 pt-5">
-      <div className="mb-1 px-2">
-        <BackNavigation
-          className="-ml-2"
-          label={podcast?.title ?? "What's New"}
-          onClick={handleBack}
-        />
-      </div>
+      <PageNavigation backLabel={backTitle} onBack={handleBack} />
 
       <ContentDetailsHeader
         actions={
@@ -132,6 +140,7 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
 }
 
 function EpisodePageSkeleton() {
+  useLocale();
   return (
     <div className="mx-auto max-w-4xl pb-12 pt-5">
       <div className="mb-1 px-2">

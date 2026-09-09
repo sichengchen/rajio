@@ -1,6 +1,9 @@
-"use client";
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
+("use client");
 
-import { useNavigate } from "@tanstack/react-router";
+import { desktopApi } from "@/desktop-api";
+import { useOpenEpisode } from "@/hooks/use-open-episode";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, Rewind, FastForward, Volume2, Info, ListMusic } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,11 +24,12 @@ import { formatTime } from "@/lib/utils";
 import { ShowNotes } from "./show-notes";
 
 export function AudioPlayer() {
+  useLocale();
   const audioRef = useRef<HTMLAudioElement>(null);
   const isPlayingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
+  const openEpisode = useOpenEpisode();
 
   const playbackState = usePodcastStore((state) => state.playbackState);
   const preferences = usePodcastStore((state) => state.preferences);
@@ -46,6 +50,21 @@ export function AudioPlayer() {
 
   const { currentEpisode, isPlaying, currentTime, duration, volume, seekRequested } = playbackState;
   isPlayingRef.current = isPlaying;
+
+  useEffect(
+    () =>
+      desktopApi.playback.onCheckpointRequested?.(async () => {
+        const audio = audioRef.current;
+        const episode = usePodcastStore.getState().playbackState.currentEpisode;
+        if (audio && episode && Number.isFinite(audio.duration)) {
+          audio.pause();
+          await usePodcastStore
+            .getState()
+            .saveProgress(episode.id, audio.currentTime, audio.duration);
+        }
+      }),
+    [],
+  );
 
   // Get current podcast info
   const currentPodcast = currentEpisode
@@ -207,19 +226,11 @@ export function AudioPlayer() {
     const loadAudioSource = async () => {
       let audioUrl = currentEpisode.audioUrl;
 
-      // Try to get local audio file first if episode is downloaded
-      if (currentEpisode.isDownloaded) {
-        try {
-          const localUrl = await DownloadService.getLocalAudioUrl(currentEpisode);
-          if (localUrl) {
-            audioUrl = localUrl;
-            console.log("Using local audio file for offline playback");
-          } else {
-            console.log("Local file missing, falling back to streaming");
-          }
-        } catch (error) {
-          console.warn("Failed to load local audio file, falling back to streaming:", error);
-        }
+      // Resolve against current native storage; the episode view may predate a completed download.
+      try {
+        audioUrl = await DownloadService.getLocalAudioUrl(currentEpisode);
+      } catch (error) {
+        console.warn("Failed to resolve audio source:", error);
       }
 
       if (cancelled) {
@@ -447,10 +458,7 @@ export function AudioPlayer() {
     } else {
       // On desktop, the artwork opens the episode's dedicated detail screen.
       if (currentEpisode) {
-        navigate({
-          params: { episodeId: currentEpisode.id },
-          to: "/episode/$episodeId",
-        });
+        void openEpisode(currentEpisode.id);
       }
     }
   };
@@ -479,7 +487,7 @@ export function AudioPlayer() {
             </DrawerTrigger>
             <DrawerContent className="h-[85vh]">
               <DrawerHeader className="flex-shrink-0">
-                <DrawerTitle>Show Notes</DrawerTitle>
+                <DrawerTitle>{t("Show Notes")}</DrawerTitle>
               </DrawerHeader>
               <div className="flex-1 overflow-y-auto">
                 <ShowNotes />
@@ -543,7 +551,7 @@ export function AudioPlayer() {
             </Button>
 
             <Button
-              aria-label={queueOpen ? "Hide Play Queue" : "Show Play Queue"}
+              aria-label={queueOpen ? t("Hide Play Queue") : t("Show Play Queue")}
               aria-pressed={queueOpen}
               className={queueOpen ? "h-9 w-9 bg-muted" : "h-9 w-9"}
               onClick={toggleQueue}
@@ -560,8 +568,12 @@ export function AudioPlayer() {
           {/* Left side: Episode image */}
           <button
             onClick={handleCoverClick}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              desktopApi.controls?.showCoverMenu();
+            }}
             className="flex-shrink-0 rounded-lg transition-transform hover:scale-105"
-            title="Open episode details"
+            title={t("Open episode details")}
           >
             <CoverImage src={currentEpisode.imageUrl} alt={currentEpisode.title} size="md" />
           </button>
@@ -649,7 +661,7 @@ export function AudioPlayer() {
             {/* Queue and Show Notes */}
             <div className="flex items-center gap-2">
               <Button
-                aria-label={queueOpen ? "Hide Play Queue" : "Show Play Queue"}
+                aria-label={queueOpen ? t("Hide Play Queue") : t("Show Play Queue")}
                 aria-pressed={queueOpen}
                 className={
                   queueOpen ? "bg-muted text-foreground hover:bg-muted" : "text-muted-foreground"
@@ -662,7 +674,7 @@ export function AudioPlayer() {
               </Button>
 
               <Button
-                aria-label={showNotesOpen ? "Hide show notes" : "Show show notes"}
+                aria-label={showNotesOpen ? t("Hide show notes") : t("Show show notes")}
                 aria-pressed={showNotesOpen}
                 size="icon"
                 variant="ghost"

@@ -20,6 +20,9 @@ playwright-report
 /out/
 
 # production
+/target
+/packages/core-wasm/generated
+/packages/core-swift/.build
 /build
 /apps/*/dist
 /apps/*/release
@@ -47,3 +50,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+/packages/ios-library/.build
+/apps/ios/Rajio.xcodeproj
+/apps/ios/Info.plist
+
+/.tools/

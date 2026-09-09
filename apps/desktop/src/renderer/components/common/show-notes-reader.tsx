@@ -71,8 +71,7 @@ function normalizeShowNotes(html: string) {
       const lastCloseTag = beforeMatch.lastIndexOf(">");
       const afterMatch = fullString.substring(offset + match.length);
       const isInsideLink =
-        afterMatch.indexOf("</a>") < afterMatch.indexOf("<a") &&
-        afterMatch.indexOf("</a>") !== -1;
+        afterMatch.indexOf("</a>") < afterMatch.indexOf("<a") && afterMatch.indexOf("</a>") !== -1;
 
       if (lastHref > lastCloseQuote || lastOpenTag > lastCloseTag || isInsideLink) {
         return match;
@@ -100,10 +99,7 @@ function promoteEmbeddedHeadings(html: string) {
       "<h2>$1</h2>",
     )
     .replace(/<p>\s*#{1,6}\s+([^<]+?)<\/p>/gi, "<h2>$1</h2>")
-    .replace(
-      /<p>\s*#{1,6}\s+([^<]+?)(?:<br\s*\/?>(?:\s*<br\s*\/?>)*)/gi,
-      "<h2>$1</h2><p>",
-    )
+    .replace(/<p>\s*#{1,6}\s+([^<]+?)(?:<br\s*\/?>(?:\s*<br\s*\/?>)*)/gi, "<h2>$1</h2><p>")
     .replace(
       /(?:<br\s*\/?>(?:\s*<br\s*\/?>)*)\s*#{1,6}\s+([^<]+?)(?:<br\s*\/?>(?:\s*<br\s*\/?>)*)/gi,
       "</p><h2>$1</h2><p>",
@@ -185,7 +181,7 @@ export function ShowNotesReader({ content, onSeek }: ShowNotesReaderProps) {
         prose-blockquote:my-5 prose-blockquote:border-l prose-blockquote:border-border prose-blockquote:pl-4 prose-blockquote:font-normal prose-blockquote:text-muted-foreground
         prose-code:rounded-sm prose-code:bg-muted/70 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-[0.86em] prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none
         prose-pre:overflow-x-auto prose-pre:rounded-md prose-pre:border prose-pre:bg-muted/45 prose-pre:text-foreground
-        [&_*]:break-words [&_a]:cursor-pointer
+        [&_*]:break-words [&_a]:cursor-pointer [&_a]:underline [&_a]:underline-offset-4 [&_a]:decoration-muted-foreground/60 [&_a:hover]:decoration-foreground
         [&_.timestamp-link]:mr-0.5 [&_.timestamp-link]:border-0 [&_.timestamp-link]:bg-transparent [&_.timestamp-link]:p-0
         [&_.timestamp-link]:font-mono [&_.timestamp-link]:text-[0.85em] [&_.timestamp-link]:font-medium [&_.timestamp-link]:tabular-nums
         [&_.timestamp-link]:text-foreground [&_.timestamp-link]:underline [&_.timestamp-link]:decoration-muted-foreground/50

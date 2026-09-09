@@ -1,0 +1,34 @@
+{
+  "request": {
+    "feedUrl": "https://example.com/feed.xml",
+    "xml": "<rss version=\"2.0\" xmlns:itunes=\"http://www.itunes.com/dtds/podcast-1.0.dtd\" xmlns:content=\"http://purl.org/rss/1.0/modules/content/\"><channel><title>Example Podcast</title><description><![CDATA[<p>Example description</p>]]></description><itunes:author>Example Author</itunes:author><language>en-us</language><itunes:image href=\"/art.jpg\"/><item><title>First Episode</title><guid>episode-guid</guid><pubDate>Mon, 01 Jun 2026 10:00:00 GMT</pubDate><itunes:duration>01:02:03</itunes:duration><content:encoded><![CDATA[<p>Show <a href=\"https://example.com\">notes</a></p>]]></content:encoded><itunes:image href=\"episode-art.jpg\"/><enclosure url=\"https://example.com/audio.mp3\" type=\"audio/mpeg\"/></item><item><title>Transcript Only</title><guid>no-audio</guid></item></channel></rss>",
+    "fetchedAt": "2026-09-05T00:00:00.000Z"
+  },
+  "expected": {
+    "episodes": [
+      {
+        "audioUrl": "https://example.com/audio.mp3",
+        "content": "<p>Show <a href=\"https://example.com\">notes</a></p>",
+        "description": "",
+        "duration": 3723,
+        "guid": "episode-guid",
+        "id": "episode_1415957073",
+        "imageUrl": "https://example.com/episode-art.jpg",
+        "podcastId": "podcast_1740899304",
+        "publishedAt": "2026-06-01T10:00:00.000Z",
+        "title": "First Episode"
+      }
+    ],
+    "podcast": {
+      "author": "Example Author",
+      "description": "Example description",
+      "feedUrl": "https://example.com/feed.xml",
+      "id": "podcast_1740899304",
+      "imageUrl": "https://example.com/art.jpg",
+      "language": "en-us",
+      "lastUpdated": "2026-09-05T00:00:00.000Z",
+      "subscriptionDate": "2026-09-05T00:00:00.000Z",
+      "title": "Example Podcast"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "request": {
+    "feedUrl": "https://example.com/empty.xml",
+    "xml": "<rss><channel><title>Empty</title></channel></rss>",
+    "fetchedAt": "2026-09-05T00:00:00.000Z"
+  },
+  "expected": {
+    "episodes": [],
+    "podcast": {
+      "description": "",
+      "feedUrl": "https://example.com/empty.xml",
+      "id": "podcast_1598885899",
+      "lastUpdated": "2026-09-05T00:00:00.000Z",
+      "subscriptionDate": "2026-09-05T00:00:00.000Z",
+      "title": "Empty"
+    }
+  }
+}
