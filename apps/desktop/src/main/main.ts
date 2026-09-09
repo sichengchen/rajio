@@ -45,7 +45,13 @@ const startupEpisodeArtworkLimit = 24;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
 app.on("before-quit", (event) => {
-  if (quitting || startupSmokePath) return;
+  if (quitting) return;
+  // Smoke tests call app.quit() after writing a marker. Window close handlers
+  // hide instead of destroy unless quitting is set; skip the playback checkpoint.
+  if (startupSmokePath) {
+    quitting = true;
+    return;
+  }
   quitting = true;
   event.preventDefault();
   const window = mainWindow;
