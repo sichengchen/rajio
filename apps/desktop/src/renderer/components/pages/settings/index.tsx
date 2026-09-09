@@ -1,3 +1,4 @@
+import { ShortcutSettings } from "../../common/shortcut-settings";
 import { languages, getLanguageChoice, setLanguage } from "../../../../shared/i18n";
 import { t, getLocale } from "../../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
@@ -11,7 +12,6 @@ import {
   SettingsSwitch,
   SettingsSelect,
   SettingsAction,
-  SettingsStats,
   SettingsDivider,
   SettingsAlert,
 } from "@/components/ui-custom/settings";
@@ -20,7 +20,6 @@ import { APP_VERSION } from "@/lib/constants";
 import { useTheme } from "next-themes";
 import { OPMLManager } from "../../common/opml-manager";
 import { toast } from "sonner";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { desktopApi } from "@/desktop-api";
 
 export function SettingsPage() {
@@ -56,7 +55,6 @@ export function SettingsPage() {
   const [downloadLimit, setDownloadLimit] = useState("2147483648");
   const [downloadDirectory, setDownloadDirectory] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
-  const isMobile = useIsMobile();
 
   const {
     preferences,
@@ -164,7 +162,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <div className="mx-auto flex max-w-4xl flex-col gap-8 px-2 py-6">
+      <div className="flex w-full flex-col gap-8 px-2 py-6">
         {/* Theme Settings */}
         <SettingsGroup title={t("Appearance")}>
           <SettingsSelect
@@ -181,7 +179,7 @@ export function SettingsPage() {
           />
           <SettingsSelect
             label={t("Theme")}
-            description={t("Choose your preferred theme")}
+            
             value={theme || "system"}
             onValueChange={handleThemeChange}
             options={[
@@ -215,7 +213,7 @@ export function SettingsPage() {
         <SettingsGroup title={t("Playback")}>
           <SettingsSelect
             label={t("Skip Interval")}
-            description={t("Time to skip forward/backward")}
+            
             value={(preferences.skipInterval || 30).toString()}
             onValueChange={handleSkipIntervalChange}
             options={[
@@ -246,6 +244,8 @@ export function SettingsPage() {
           />
         </SettingsGroup>
 
+        <ShortcutSettings />
+
         {/* Storage Management */}
         <SettingsGroup title={t("Storage Management")}>
           <SettingsSelect
@@ -274,20 +274,6 @@ export function SettingsPage() {
             variant="outline"
             icon={FolderOpen}
             loading={isChoosingDownloadDirectory}
-          />
-
-          <SettingsStats
-            label={t("Storage Statistics")}
-            stats={[
-              {
-                label: isMobile ? t("Downloaded") : t("Downloaded Episodes"),
-                value: storageStats?.downloadedEpisodes || 0,
-              },
-              {
-                label: t("Storage Used"),
-                value: formatFileSize(storageStats?.totalSize || 0),
-              },
-            ]}
           />
 
           {storageStats && storageStats.totalSize > 500 * 1024 * 1024 && (
@@ -351,7 +337,7 @@ export function SettingsPage() {
           </SettingsDivider>
         </SettingsGroup>
 
-        <div className="text-xs text-muted-foreground text-center">{t("Version")}{APP_VERSION} · Created by{" "}
+        <div className="text-xs text-muted-foreground text-center">{t("Version {version}", { version: APP_VERSION })} · Created by{" "}
           <a
             href="https://www.scchan.com"
             target="_blank"

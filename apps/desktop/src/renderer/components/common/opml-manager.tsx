@@ -69,18 +69,18 @@ export function OPMLManager() {
         size="sm"
         onClick={exportOPML}
         disabled={podcasts.length === 0}
-        className="whitespace-nowrap"
+        className="justify-start whitespace-nowrap px-3"
       >
-        <Download className="h-3 w-3 mr-1" />{t("Export OPML")}</Button>
+        <Download className="h-4 w-4" />{t("Export OPML")}</Button>
 
       <Button
         variant="outline"
         size="sm"
         onClick={handleImportClick}
-        className="whitespace-nowrap"
+        className="justify-start whitespace-nowrap px-3"
         disabled={progressDialog.isOpen}
       >
-        <Upload className="h-3 w-3 mr-1" />
+        <Upload className="h-4 w-4" />
         {progressDialog.isOpen ? t("Importing...") : t("Import OPML")}
       </Button>
 

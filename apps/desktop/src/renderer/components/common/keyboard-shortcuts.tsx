@@ -1,83 +1,27 @@
-"use client";
-
-import { useEffect } from "react";
-import { usePodcastStore } from "@/lib/store";
-import { router } from "@/router";
+import { useEffect } from 'react';
+import { desktopApi } from '@/desktop-api';
+import { defaultShortcuts, shortcutActions } from '../../../shared/controls';
+import { router } from '@/router';
 
 export function KeyboardShortcuts() {
-  const { playbackState, pausePlayback, resumePlayback, setCurrentTime, preferences } =
-    usePodcastStore();
-
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (
-        event.metaKey &&
-        !event.ctrlKey &&
-        !event.altKey &&
-        !event.shiftKey &&
-        event.code === "Comma"
-      ) {
-        event.preventDefault();
-        void router.navigate({ to: "/settings" });
-        return;
-      }
-
-      // Only handle shortcuts when not typing in an input
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      switch (event.code) {
-        case "Space":
-          event.preventDefault();
-          if (playbackState.isPlaying) {
-            pausePlayback();
-          } else {
-            resumePlayback();
-          }
-          break;
-
-        case "ArrowLeft":
-          event.preventDefault();
-          const newTimeLeft = Math.max(0, playbackState.currentTime - preferences.skipInterval);
-          setCurrentTime(newTimeLeft);
-          break;
-
-        case "ArrowRight":
-          event.preventDefault();
-          const newTimeRight = Math.min(
-            playbackState.duration,
-            playbackState.currentTime + preferences.skipInterval,
-          );
-          setCurrentTime(newTimeRight);
-          break;
-
-        case "KeyK":
-          event.preventDefault();
-          if (playbackState.isPlaying) {
-            pausePlayback();
-          } else {
-            resumePlayback();
-          }
-          break;
-
-        case "KeyJ":
-          event.preventDefault();
-          const newTimeJ = Math.max(0, playbackState.currentTime - 10);
-          setCurrentTime(newTimeJ);
-          break;
-
-        case "KeyL":
-          event.preventDefault();
-          const newTimeL = Math.min(playbackState.duration, playbackState.currentTime + 10);
-          setCurrentTime(newTimeL);
-          break;
-      }
+  useEffect(()=>{
+    let bindings=defaultShortcuts;
+    let active=true;
+    void desktopApi.controls?.shortcuts().then(value=>{if(active) bindings=value.bindings;});
+    const stop=desktopApi.controls?.onShortcuts(value=>{bindings=value;});
+    const handle=(event:KeyboardEvent)=>{
+      if (event.defaultPrevented || event.repeat || event.isComposing) return;
+      const el=event.target as HTMLElement;
+      if (el.closest?.('input, textarea, select, button, [contenteditable="true"], [role="slider"], [role="combobox"]')) return;
+      const command = /Mac/.test(navigator.platform) ? event.metaKey : event.ctrlKey;
+      if(command && event.code==='Comma' && !event.altKey && !event.shiftKey){event.preventDefault();void router.navigate({to:'/settings'});return;}
+      if ((/Mac/.test(navigator.platform) ? event.ctrlKey : event.metaKey)) return;
+      const key = event.code.replace(/^Key/,'').replace(/^Digit/,'').replace(/^Arrow/,'');
+      const accelerator=[...(command?['CommandOrControl']:[]),...(event.altKey?['Alt']:[]),...(event.shiftKey?['Shift']:[]),key].join('+');
+      for(const action of shortcutActions) if(!bindings[action].global && bindings[action].accelerator===accelerator){event.preventDefault();desktopApi.controls?.command({action});break;}
     };
-
-    document.addEventListener("keydown", handleKeyPress);
-    return () => document.removeEventListener("keydown", handleKeyPress);
-  }, [playbackState, pausePlayback, resumePlayback, setCurrentTime, preferences.skipInterval]);
-
-  return null; // This component doesn't render anything
+    document.addEventListener('keydown',handle);
+    return()=>{active=false;stop?.();document.removeEventListener('keydown',handle);};
+  },[]);
+  return null;
 }

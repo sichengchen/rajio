@@ -1,6 +1,6 @@
 import { t } from "../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { BackNavigation } from "@/components/common/back-navigation";
@@ -77,6 +77,8 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
+  const [scrolled,setScrolled]=useState(false);
+  useEffect(()=>setScrolled(false),[location.pathname]);
   const playbackState = usePodcastStore((state) => state.playbackState);
   const showAddPodcastDialog = usePodcastStore((state) => state.showAddPodcastDialog);
   const setShowAddPodcastDialog = usePodcastStore((state) => state.setShowAddPodcastDialog);
@@ -85,7 +87,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
   const pageContent = (
     <div className="app-drag mx-auto max-w-6xl px-4 py-3">
       {title ? (
-        <div className="sticky top-0 z-30 -mx-4 mt-6 flex items-center gap-3 border-b border-border/60 bg-background/95 px-6 py-3 backdrop-blur-sm">
+        <div data-page-header className={`sticky top-0 z-30 -mx-4 mt-6 flex items-center gap-3 border-b ${scrolled ? "border-border/60" : "border-transparent"} bg-background/95 px-6 py-3 backdrop-blur-sm`}>
           {isMobile && backTo ? (
             <BackNavigation
               className="-ml-2"
@@ -122,7 +124,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-col" onScrollCapture={event => { const target=event.target as HTMLElement; if(target.matches("[data-page-scroll], [data-slot=desktop-safe-scroll-viewport]")) setScrolled(target.scrollTop>0); }}>
         {isMobile ? (
           <div
             data-page-scroll

@@ -43,7 +43,7 @@ export function SettingsGroup({
 }: SettingsGroupProps) {
   useLocale();
   return (
-    <section className={cn("flex flex-col gap-1", className)} aria-label={title}>
+    <section className={cn("flex flex-col gap-3", className)} aria-label={title}>
       <header className="flex flex-col gap-1 border-b border-border/60 pb-3">
         <h2 className="flex items-center gap-2 text-base font-semibold">
           {Icon && <Icon className="size-4" />}
@@ -51,7 +51,7 @@ export function SettingsGroup({
         </h2>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </header>
-      <div className="divide-y divide-border/60">{children}</div>
+      <div className="space-y-1">{children}</div>
     </section>
   );
 }
@@ -76,7 +76,7 @@ export function SettingsItem({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex min-w-0 flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
@@ -217,7 +217,7 @@ export function SettingsAction({
   actionLabel,
   loadingLabel,
   onAction,
-  variant = "default",
+  variant = "outline",
   icon: Icon,
   confirmDialog,
   disabled,
@@ -227,13 +227,13 @@ export function SettingsAction({
   useLocale();
   const button = (
     <Button
-      variant={variant}
+      variant={variant === "destructive" ? "destructive" : "outline"}
       size="sm"
       onClick={confirmDialog ? undefined : onAction}
       disabled={disabled || loading}
-      className="flex items-center gap-2"
+      className="flex items-center justify-start gap-2 px-3"
     >
-      {Icon && <Icon className="h-3 w-3" />}
+      {Icon && <Icon className="h-4 w-4" />}
       {loading ? loadingLabel || actionLabel : actionLabel}
     </Button>
   );

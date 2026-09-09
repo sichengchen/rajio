@@ -53,6 +53,7 @@ export const ipcChannels = {
 } as const;
 
 export interface NewcastleApi {
+  controls?: import("./controls").ControlsApi;
   library: {
     refreshAll?: () => Promise<void>;
     refreshState?: () => Promise<{ running: boolean; checkedAt?: string; failures: string[] }>;

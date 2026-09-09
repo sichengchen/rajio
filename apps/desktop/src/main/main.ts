@@ -1,4 +1,5 @@
-import { setLanguage, subscribeLocale } from "../shared/i18n";
+import { installDesktopControls } from "./desktop-controls";
+import { setLanguage } from "../shared/i18n";
 import { t } from "../shared/i18n";
 import { ipcChannels } from "../shared/ipc";
 import {
@@ -7,8 +8,6 @@ import {
   dialog,
   nativeImage,
   powerMonitor,
-  Tray,
-  Menu,
   protocol,
   shell,
   ipcMain,
@@ -35,13 +34,13 @@ const appIconPath = app.isPackaged
 const appIcon = nativeImage.createFromPath(appIconPath);
 const startupEpisodeArtworkLimit = 24;
 const startupArtworkWaitMs = 3_000;
-let tray: Tray | undefined;
+let mainWindow: BrowserWindow | undefined;
 let quitting = false;
 app.on("before-quit", (event) => {
   if (quitting || startupSmokePath) return;
   quitting = true;
   event.preventDefault();
-  const window = BrowserWindow.getAllWindows()[0];
+  const window = mainWindow;
   if (!window || window.webContents.isDestroyed()) {
     app.quit();
     return;
@@ -137,7 +136,7 @@ if (process.env.RAJIO_USER_DATA_DIR) app.setPath("userData", process.env.RAJIO_U
 app.setAppUserModelId(appId);
 if (!app.requestSingleInstanceLock()) app.quit();
 app.on("second-instance", () => {
-  const window = BrowserWindow.getAllWindows()[0];
+  const window = mainWindow;
   if (window) {
     window.show();
     window.focus();
@@ -176,29 +175,21 @@ void app
           app.getPath("downloads"),
         );
     const refresh = registerIpcHandlers(db, defaultDownloadDirectory);
-    const mainWindow = createMainWindow(startupArtworkReady);
-    if (process.platform !== "darwin") {
-      tray = new Tray(appIcon);
-      tray.setToolTip("Rajio");
-      const updateTrayMenu = () => tray?.setContextMenu(
-        Menu.buildFromTemplate([
-          {
-            label: t("Open Rajio"),
-            click: () => {
-              mainWindow.show();
-              mainWindow.focus();
-            },
-          },
-          { role: "quit", label: t("Quit Rajio") },
-        ]),
-      );
-      updateTrayMenu();
-      subscribeLocale(updateTrayMenu);
-      tray.on("click", () => {
-        mainWindow.show();
-        mainWindow.focus();
+    mainWindow = createMainWindow(startupArtworkReady);
+    installDesktopControls(mainWindow, db, (kind) => {
+      const surface = new BrowserWindow({ width: 400, height: 180, minWidth: 360, minHeight: 180,
+        show: false, title: 'Rajio', alwaysOnTop: true, skipTaskbar: true,
+        ...(kind === 'tray' ? { frame: false, resizable: false } : { titleBarStyle: 'hiddenInset' as const }),
+        ...(process.platform === 'darwin' ? { vibrancy: 'popover' as const } : {}),
+        webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(mainDir, '../preload/index.cjs'), sandbox: false },
       });
-    }
+      surface.on('close', event => { if (!quitting) { event.preventDefault(); surface.hide(); } });
+      if (kind === 'tray') surface.on('blur', () => surface.hide());
+      registerExternalNavigation(surface.webContents, url => shell.openExternal(url));
+      if (rendererDevServerUrl) { const url = new URL(rendererDevServerUrl); url.searchParams.set('surface',kind); void surface.loadURL(url.toString()); }
+      else void surface.loadFile(path.join(mainDir, '../renderer/index.html'), {query:{surface:kind}});
+      return surface;
+    }, path.join(path.dirname(appIconPath), "trayTemplate.png"));
     const refreshLibrary = () => {
       void refresh.run().catch((error) => console.error(t("Refresh failed"), error));
     };
@@ -212,12 +203,12 @@ void app
     });
 
     app.on("activate", () => {
-      const window = BrowserWindow.getAllWindows()[0];
+      const window = mainWindow;
       if (window) {
         window.show();
         window.focus();
       } else {
-        createMainWindow();
+        mainWindow = createMainWindow();
       }
       refreshLibrary();
     });

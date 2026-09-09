@@ -19,3 +19,4 @@ cp "$icon_output/Rajio.icns" "$resources/Rajio.icns"
 # actool adds the macOS safe-area inset; the Composer PNG export is full bleed.
 # Use the compiled macOS rendition for Electron development Dock icons.
 sips -s format png "$icon_output/Rajio.icns" --out "$resources/icon-macos.png" >/dev/null
+pnpm --filter @rajio-app/desktop exec electron "$repo_root/scripts/export-menu-bar-icon.cjs"

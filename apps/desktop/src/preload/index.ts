@@ -2,7 +2,24 @@ import { contextBridge, ipcRenderer } from "electron";
 
 import { ipcChannels, type NewcastleApi } from "../shared/ipc";
 
+import { controlChannel as c } from "../shared/controls";
+function listen<T>(channel: string, callback: (value: T) => void) {
+  const listener = (_event: Electron.IpcRendererEvent, value: T) => callback(value);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
+}
 const api: NewcastleApi = {
+  controls: {
+    showCoverMenu: () => ipcRenderer.send(c + ":cover-menu"),
+    get: () => ipcRenderer.invoke(c + ':get'),
+    publish: state => ipcRenderer.send(c + ':state', state),
+    command: command => ipcRenderer.send(c + ':command', command),
+    onState: callback => listen(c + ':state', callback),
+    onCommand: callback => listen(c + ':command', callback),
+    shortcuts: () => ipcRenderer.invoke(c + ':shortcuts'),
+    saveShortcuts: bindings => ipcRenderer.invoke(c + ':save-shortcuts', bindings),
+    onShortcuts: callback => listen(c + ':shortcuts', callback),
+  },
   downloads: {
     cancel: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.cancel, episodeId),
     statuses: () => ipcRenderer.invoke(ipcChannels.downloads.statuses),

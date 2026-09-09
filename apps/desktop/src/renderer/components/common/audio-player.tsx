@@ -568,6 +568,7 @@ export function AudioPlayer() {
           {/* Left side: Episode image */}
           <button
             onClick={handleCoverClick}
+            onContextMenu={event => { event.preventDefault(); desktopApi.controls?.showCoverMenu(); }}
             className="flex-shrink-0 rounded-lg transition-transform hover:scale-105"
             title={t("Open episode details")}
           >
