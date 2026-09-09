@@ -25,6 +25,10 @@ pub enum LibraryRequest {
         included: bool,
         index: Option<usize>,
     },
+    NormalizeCollection {
+        name: String,
+        ids: Vec<String>,
+    },
     ReconcileEpisodes {
         incoming: Vec<crate::Episode>,
         existing: Vec<crate::Episode>,
@@ -93,7 +97,7 @@ pub fn apply(request: LibraryRequest) -> Result<serde_json::Value, String> {
             }
             let mut result = Vec::new();
             for id in ids {
-                if id != episode_id && !result.contains(&id) {
+                if !id.is_empty() && id != episode_id && !result.contains(&id) {
                     result.push(id);
                 }
             }
@@ -101,6 +105,20 @@ pub fn apply(request: LibraryRequest) -> Result<serde_json::Value, String> {
                 result.insert(index.unwrap_or(result.len()).min(result.len()), episode_id);
             }
             Ok(json!(result))
+        }
+        LibraryRequest::NormalizeCollection { name, ids } => {
+            let limit = match name.as_str() {
+                "favorites" => 500,
+                "queue" => 100,
+                _ => return Err("Unknown collection".into()),
+            };
+            let mut seen = std::collections::HashSet::new();
+            let ids: Vec<_> = ids
+                .into_iter()
+                .filter(|id| !id.is_empty() && seen.insert(id.clone()))
+                .take(limit)
+                .collect();
+            Ok(json!(ids))
         }
         LibraryRequest::ReconcileEpisodes { incoming, existing } => {
             let mut result: Vec<crate::Episode> = Vec::new();
@@ -164,6 +182,31 @@ fn validate_url(value: &str) -> Result<url::Url, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn collection_limits_preserve_order_and_remove_empty_duplicates() {
+        let mut ids = vec![String::new(), "first".into(), "first".into()];
+        ids.extend((0..600).map(|n| n.to_string()));
+        let queue = apply(LibraryRequest::NormalizeCollection {
+            name: "queue".into(),
+            ids: ids.clone(),
+        })
+        .unwrap();
+        let favorites = apply(LibraryRequest::NormalizeCollection {
+            name: "favorites".into(),
+            ids,
+        })
+        .unwrap();
+        assert_eq!(queue.as_array().unwrap().len(), 100);
+        assert_eq!(queue[0], "first");
+        assert_eq!(queue[1], "0");
+        assert_eq!(favorites.as_array().unwrap().len(), 500);
+        assert!(apply(LibraryRequest::NormalizeCollection {
+            name: "other".into(),
+            ids: vec![]
+        })
+        .is_err());
+    }
+
     #[test]
     fn checkpoint_bounds_and_unknown_duration() {
         let request = |position, duration| LibraryRequest::Checkpoint {

@@ -273,7 +273,9 @@ public actor LibraryDatabase {
         "kind": "collection", "ids": ids, "episodeId": episodeId, "included": included,
       ]
       if let index { command["index"] = index }
-      let result = try RajioCore.library(command, as: [String].self)
+      let changed = try RajioCore.library(command, as: [String].self)
+      let result = try RajioCore.library(
+        ["kind": "normalizeCollection", "name": name, "ids": changed], as: [String].self)
       try db.execute(
         sql:
           "INSERT INTO collections VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET record=excluded.record",

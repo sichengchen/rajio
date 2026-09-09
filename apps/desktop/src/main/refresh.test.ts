@@ -28,3 +28,21 @@ test("refresh deduplicates lifecycle triggers and bounds requests while collecti
   assert.equal(scheduler.state.running, false);
   assert.deepEqual(scheduler.state.failures, ["Show 2: HTTP 503"]);
 });
+
+test("library read failure clears running state and allows the next refresh", async () => {
+  let fail = true;
+  const library = {
+    listPodcasts: async () => {
+      if (fail) throw new Error("database unavailable");
+      return [];
+    },
+  } as unknown as LibraryService;
+  const scheduler = new RefreshScheduler(library, () => {});
+  await scheduler.run();
+  assert.equal(scheduler.state.running, false);
+  assert.deepEqual(scheduler.state.failures, ["database unavailable"]);
+  fail = false;
+  await scheduler.run();
+  assert.equal(scheduler.state.running, false);
+  assert.deepEqual(scheduler.state.failures, []);
+});

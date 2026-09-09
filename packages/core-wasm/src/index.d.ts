@@ -64,3 +64,9 @@ export function applyLibrary(request: {
   incoming: Array<Omit<Episode, "description"> & { description?: string }>;
   existing: Array<Omit<Episode, "description"> & { description?: string }>;
 }): { episodes: Episode[]; aliases: Record<string, string> };
+
+export function applyLibrary(request: {
+  kind: "normalizeCollection";
+  name: "favorites" | "queue";
+  ids: string[];
+}): string[];
