@@ -31,3 +31,6 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - run: node scripts/test-core.mjs
+      - run: pnpm --filter @rajio-app/desktop check
+      - run: pnpm --filter @rajio-app/desktop test
+      - run: pnpm --filter @rajio-app/desktop build

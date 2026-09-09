@@ -48,6 +48,7 @@ export function SettingsPage() {
   const [isClearingData, setIsClearingData] = useState(false);
   const [isClearingDownloads, setIsClearingDownloads] = useState(false);
   const [isChoosingDownloadDirectory, setIsChoosingDownloadDirectory] = useState(false);
+  const [downloadLimit, setDownloadLimit] = useState("2147483648");
   const [downloadDirectory, setDownloadDirectory] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
@@ -77,6 +78,7 @@ export function SettingsPage() {
       .then((settings) => {
         if (isCurrent) {
           setDownloadDirectory(settings.downloadDirectory ?? null);
+          setDownloadLimit(settings.downloadLimitBytes ?? "2147483648");
         }
       })
       .catch((error: unknown) => {
@@ -229,6 +231,23 @@ export function SettingsPage() {
 
         {/* Storage Management */}
         <SettingsGroup title="Storage Management">
+          <SettingsSelect
+            label="Download storage limit"
+            description="Maximum space used by downloaded audio"
+            value={downloadLimit}
+            options={[
+              { value: "536870912", label: "512 MB" },
+              { value: "2147483648", label: "2 GB" },
+              { value: "10737418240", label: "10 GB" },
+              { value: "53687091200", label: "50 GB" },
+            ]}
+            onValueChange={(value) => {
+              void desktopApi.settings
+                .set({ downloadLimitBytes: value })
+                .then(() => setDownloadLimit(value))
+                .catch(() => toast.error("Unable to update download limit"));
+            }}
+          />
           <SettingsAction
             label="Download Folder"
             description={downloadDirectory ?? "Choose where new downloads are saved"}

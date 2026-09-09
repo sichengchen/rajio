@@ -163,12 +163,14 @@ void app
     const startupArtworkReady = waitUpTo(initialArtworkWarmup, startupArtworkWaitMs);
 
     void initialArtworkWarmup.then(() => imageCache.warm(allArtworkUrls));
-    const defaultDownloadDirectory = resolveDefaultDownloadDirectory(
-      process.platform,
-      app.getName(),
-      app.getPath("appData"),
-      app.getPath("downloads"),
-    );
+    const defaultDownloadDirectory = process.env.RAJIO_USER_DATA_DIR
+      ? path.join(app.getPath("userData"), "Downloads")
+      : resolveDefaultDownloadDirectory(
+          process.platform,
+          app.getName(),
+          app.getPath("appData"),
+          app.getPath("downloads"),
+        );
     const refresh = registerIpcHandlers(db, defaultDownloadDirectory);
     const mainWindow = createMainWindow(startupArtworkReady);
     if (process.platform !== "darwin") {

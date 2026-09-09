@@ -35,6 +35,12 @@ export class SettingsService {
       throw new Error("Download directory must be an absolute path.");
     }
 
+    if (
+      settings.downloadLimitBytes !== undefined &&
+      (!Number.isSafeInteger(Number(settings.downloadLimitBytes)) ||
+        Number(settings.downloadLimitBytes) <= 0)
+    )
+      throw new Error("Download limit must be a positive number of bytes.");
     this.db.setSettings(settings);
     return this.get();
   }

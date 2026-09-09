@@ -69,6 +69,7 @@ export interface DownloadStatus {
 }
 
 export interface DesktopSettings {
+  downloadLimitBytes?: string;
   downloadDirectory?: string;
   favoriteEpisodes?: string;
   playbackQueue?: string;

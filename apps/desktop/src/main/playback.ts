@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { applyLibrary } from "@rajio-app/core-wasm/node";
 import { pathToFileURL } from "node:url";
 
@@ -17,7 +18,7 @@ export class PlaybackService {
       throw new Error("Episode not found");
     }
 
-    if (episode.downloadedPath) {
+    if (episode.downloadedPath && existsSync(episode.downloadedPath)) {
       return {
         episodeId,
         isLocal: true,
@@ -25,6 +26,7 @@ export class PlaybackService {
       };
     }
 
+    if (episode.downloadedPath) this.db.clearDownloadedEpisode(episodeId);
     return {
       episodeId,
       isLocal: false,

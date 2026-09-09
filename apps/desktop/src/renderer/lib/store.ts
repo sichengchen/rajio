@@ -244,6 +244,7 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
   },
 
   cancelDownload: async (episodeId) => {
+    await desktopApi.downloads.cancel?.(episodeId);
     const next = new Map(get().downloadProgress);
     next.delete(episodeId);
     set({ downloadProgress: next });
@@ -341,7 +342,9 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
     };
     get().updateDownloadProgress(episode.id, progress);
     try {
-      await desktopApi.downloads.start(episode.id);
+      const result = await desktopApi.downloads.start(episode.id);
+      if (result.status === "queued") return;
+      if (result.status !== "downloaded") throw new Error(result.error ?? "Download failed");
       get().updateDownloadProgress(episode.id, {
         ...progress,
         completedAt: new Date(),

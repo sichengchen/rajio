@@ -223,19 +223,11 @@ export function AudioPlayer() {
     const loadAudioSource = async () => {
       let audioUrl = currentEpisode.audioUrl;
 
-      // Try to get local audio file first if episode is downloaded
-      if (currentEpisode.isDownloaded) {
-        try {
-          const localUrl = await DownloadService.getLocalAudioUrl(currentEpisode);
-          if (localUrl) {
-            audioUrl = localUrl;
-            console.log("Using local audio file for offline playback");
-          } else {
-            console.log("Local file missing, falling back to streaming");
-          }
-        } catch (error) {
-          console.warn("Failed to load local audio file, falling back to streaming:", error);
-        }
+      // Resolve against current native storage; the episode view may predate a completed download.
+      try {
+        audioUrl = await DownloadService.getLocalAudioUrl(currentEpisode);
+      } catch (error) {
+        console.warn("Failed to resolve audio source:", error);
       }
 
       if (cancelled) {

@@ -688,6 +688,18 @@ export class LocalDatabase {
     }));
   }
 
+  downloadedBytes(): number {
+    return Number(
+      (
+        this.db
+          .prepare(
+            "SELECT COALESCE(SUM(file_size),0) AS total FROM episodes WHERE downloaded_path IS NOT NULL",
+          )
+          .get() as { total: number }
+      ).total,
+    );
+  }
+
   getDownloadStatus(episodeId: string): DownloadStatus {
     const row = this.db
       .prepare(

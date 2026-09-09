@@ -14,6 +14,9 @@ import type {
 export const ipcChannels = {
   downloads: {
     delete: "downloads:delete",
+    cancel: "downloads:cancel",
+    statuses: "downloads:statuses",
+    changed: "downloads:changed",
     start: "downloads:start",
   },
   episodes: {
@@ -67,6 +70,9 @@ export interface NewcastleApi {
     search: (request: EpisodeSearchRequest) => Promise<EpisodePage>;
   };
   downloads: {
+    cancel?: (episodeId: string) => Promise<void>;
+    statuses?: () => Promise<DownloadStatus[]>;
+    onChanged?: (callback: (status: DownloadStatus) => void) => () => void;
     start: (episodeId: string) => Promise<DownloadStatus>;
     delete: (episodeId: string) => Promise<void>;
   };

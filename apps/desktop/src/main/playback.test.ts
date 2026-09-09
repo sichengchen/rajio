@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -20,11 +20,16 @@ test("returns local or remote playback sources and rejects missing episodes", as
       source: "https://cdn.example/episode.mp3",
     });
 
-    db.markEpisodeDownloaded("episode_1", "/tmp/downloaded.mp3", 123);
+    const downloaded = path.join(
+      mkdtempSync(path.join(tmpdir(), "rajio-audio-")),
+      "downloaded.mp3",
+    );
+    writeFileSync(downloaded, "audio");
+    db.markEpisodeDownloaded("episode_1", downloaded, 5);
     assert.deepEqual(await playback.getSource("episode_1"), {
       episodeId: "episode_1",
       isLocal: true,
-      source: pathToFileURL("/tmp/downloaded.mp3").toString(),
+      source: pathToFileURL(downloaded).toString(),
     });
 
     await assert.rejects(playback.getSource("missing"), /Episode not found/);

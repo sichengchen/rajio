@@ -14,7 +14,18 @@ export function registerIpcHandlers(
   defaultDownloadDirectory: string,
 ): RefreshScheduler {
   const settings = new SettingsService(db, defaultDownloadDirectory);
-  const downloads = new DownloadService(db, () => settings.getDownloadDirectory());
+  const downloads = new DownloadService(
+    db,
+    () => settings.getDownloadDirectory(),
+    (status) => {
+      for (const window of BrowserWindow.getAllWindows())
+        window.webContents.send(ipcChannels.downloads.changed, status);
+    },
+  );
+  ipcMain.handle(ipcChannels.downloads.cancel, (_event, episodeId: string) =>
+    downloads.cancel(episodeId),
+  );
+  ipcMain.handle(ipcChannels.downloads.statuses, () => downloads.statuses());
   const library = new LibraryService(db);
   const playback = new PlaybackService(db);
   const sync = new SyncService(db);
@@ -30,9 +41,10 @@ export function registerIpcHandlers(
   ipcMain.handle(ipcChannels.library.subscribe, (_event, feedUrl: string) =>
     library.subscribe(feedUrl),
   );
-  ipcMain.handle(ipcChannels.library.unsubscribe, (_event, podcastId: string) =>
-    library.unsubscribe(podcastId),
-  );
+  ipcMain.handle(ipcChannels.library.unsubscribe, async (_event, podcastId: string) => {
+    for (const episode of db.listEpisodesByPodcast(podcastId)) await downloads.delete(episode.id);
+    await library.unsubscribe(podcastId);
+  });
   ipcMain.handle(ipcChannels.library.refresh, (_event, podcastId: string) =>
     library.refresh(podcastId),
   );

@@ -4,6 +4,16 @@ import { ipcChannels, type NewcastleApi } from "../shared/ipc";
 
 const api: NewcastleApi = {
   downloads: {
+    cancel: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.cancel, episodeId),
+    statuses: () => ipcRenderer.invoke(ipcChannels.downloads.statuses),
+    onChanged: (callback) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        status: import("../shared/types").DownloadStatus,
+      ) => callback(status);
+      ipcRenderer.on(ipcChannels.downloads.changed, listener);
+      return () => ipcRenderer.removeListener(ipcChannels.downloads.changed, listener);
+    },
     delete: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.delete, episodeId),
     start: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.start, episodeId),
   },
