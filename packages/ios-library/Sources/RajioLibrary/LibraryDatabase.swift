@@ -42,10 +42,19 @@ public actor LibraryDatabase {
       var podcast = feed.podcast
       let existing = try Data.fetchOne(
         db, sql: "SELECT record FROM podcasts WHERE id = ?", arguments: [podcast.id])
+      struct SubscriptionPlan: Decodable {
+        let subscriptionDate: String
+        let isNew: Bool
+      }
+      var command: [String: Any] = [
+        "kind": "subscription", "feedUrl": podcast.feedUrl, "fetchedAt": fetchedAt,
+      ]
       if let existing {
-        podcast.subscriptionDate = try JSONDecoder().decode(Podcast.self, from: existing)
+        command["existingDate"] = try JSONDecoder().decode(Podcast.self, from: existing)
           .subscriptionDate
       }
+      let plan = try RajioCore.library(command, as: SubscriptionPlan.self)
+      podcast.subscriptionDate = plan.subscriptionDate
       try db.execute(
         sql:
           "INSERT INTO podcasts VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET feed_url=excluded.feed_url, record=excluded.record",
@@ -58,7 +67,7 @@ public actor LibraryDatabase {
             episode.id, episode.podcastId, episode.publishedAt, try JSONEncoder().encode(episode),
           ])
       }
-      if existing == nil {
+      if plan.isNew {
         try Self.appendOutbox(
           db, kind: "subscription.upsert", payload: ["feedUrl": podcast.feedUrl], at: fetchedAt)
       }
@@ -108,8 +117,11 @@ public actor LibraryDatabase {
     guard position.isFinite, duration.isFinite, position >= 0, duration >= 0 else {
       throw LibraryError.invalidProgress
     }
-    let progress = ListeningProgress(
-      episodeId: episodeId, position: position, duration: duration, updatedAt: at)
+    let progress = try RajioCore.library(
+      [
+        "kind": "checkpoint", "episodeId": episodeId,
+        "position": position, "duration": duration, "updatedAt": at,
+      ], as: ListeningProgress.self)
     try queue.write { db in
       try db.execute(
         sql:

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { parseFeed } from "@rajio-app/core-wasm/node";
 import { LocalDatabase } from "./db";
 import { LibraryService } from "./library";
 import type { EpisodeSummary, PodcastSummary } from "../shared/types";
@@ -276,3 +277,80 @@ function seedPodcast(
   });
   db.upsertEpisodes(episodes);
 }
+
+test("outbox failure rolls back subscribe and unsubscribe, including cascaded rows", async () => {
+  const db = createTestDatabase();
+  const library = new LibraryService(db, feedReader(feed()));
+  const append = db.appendOutbox.bind(db);
+  db.appendOutbox = () => {
+    throw new Error("Injected outbox failure");
+  };
+  try {
+    await assert.rejects(library.subscribe("https://example.com/feed.xml"), /Injected/);
+    assert.equal(db.listPodcasts().length, 0);
+    assert.equal(db.listEpisodes().length, 0);
+    db.appendOutbox = append;
+    await library.subscribe("https://example.com/feed.xml");
+    db.appendOutbox = () => {
+      throw new Error("Injected outbox failure");
+    };
+    await assert.rejects(library.unsubscribe("podcast_1"), /Injected/);
+    assert.equal(db.listPodcasts().length, 1);
+    assert.equal(db.listEpisodes().length, 1);
+    assert.equal(db.listOutbox().length, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test("duplicate subscriptions preserve the date and do not emit another operation", async () => {
+  const db = createTestDatabase();
+  const library = new LibraryService(db, feedReader(feed()));
+  try {
+    await library.subscribe("https://example.com/feed.xml");
+    await library.subscribe("https://example.com/feed.xml");
+    assert.equal(db.listOutbox().length, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test("shared feed fixtures preserve identities and progress across adapter reopen and refresh", async () => {
+  const fixtures = new URL("../../../../crates/rajio-core/tests/fixtures/", import.meta.url);
+  for (const filename of readdirSync(fixtures).filter((name) => name.endsWith(".json"))) {
+    const fixture = JSON.parse(readFileSync(new URL(filename, fixtures), "utf8"));
+    const parsed = parseFeed(fixture.request);
+    const dbPath = path.join(mkdtempSync(path.join(tmpdir(), "rajio-fixture-")), "library.sqlite");
+    let db = new LocalDatabase(dbPath);
+    await new LibraryService(db, feedReader(parsed)).subscribe(parsed.podcast.feedUrl);
+    for (const episode of parsed.episodes)
+      db.savePlaybackProgress({
+        episodeId: episode.id,
+        podcastId: episode.podcastId,
+        currentTime: 12,
+        duration: 100,
+        isCompleted: false,
+      });
+    db.close();
+    db = new LocalDatabase(dbPath);
+    try {
+      await new LibraryService(db, feedReader(parsed)).refresh(parsed.podcast.id);
+      assert.equal(
+        db.getPodcast(parsed.podcast.id)?.subscriptionDate,
+        fixture.expected.podcast.subscriptionDate,
+      );
+      assert.deepEqual(
+        db
+          .listEpisodes()
+          .map((e) => e.id)
+          .sort(),
+        fixture.expected.episodes.map((e: EpisodeSummary) => e.id).sort(),
+      );
+      for (const episode of parsed.episodes)
+        assert.equal(db.getPlaybackProgress(episode.id)?.currentTime, 12);
+      assert.equal(db.listOutbox().length, 1);
+    } finally {
+      db.close();
+    }
+  }
+});

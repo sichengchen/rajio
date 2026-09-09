@@ -1,3 +1,4 @@
+import { applyLibrary } from "@rajio-app/core-wasm/node";
 import type {
   EpisodePage,
   EpisodePageRequest,
@@ -24,17 +25,26 @@ export class LibraryService {
 
   async subscribe(feedUrl: string): Promise<PodcastSummary> {
     const { episodes, podcast } = await this.rss.fetchFeed(feedUrl);
-    this.db.upsertPodcast(podcast);
-    this.db.upsertEpisodes(episodes);
-    this.db.appendOutbox("subscription.upsert", { feedUrl: podcast.feedUrl });
-    return podcast;
+    return this.db.transaction(() => {
+      const plan = applyLibrary({
+        kind: "subscription",
+        feedUrl: podcast.feedUrl,
+        existingDate: this.db.getPodcast(podcast.id)?.subscriptionDate,
+        fetchedAt: podcast.lastUpdated ?? new Date().toISOString(),
+      });
+      const saved = { ...podcast, subscriptionDate: plan.subscriptionDate };
+      this.db.upsertPodcast(saved);
+      this.db.upsertEpisodes(episodes);
+      if (plan.isNew) this.db.appendOutbox("subscription.upsert", { feedUrl: podcast.feedUrl });
+      return saved;
+    });
   }
 
   async unsubscribe(podcastId: string): Promise<void> {
-    const podcast = this.db.deletePodcast(podcastId);
-    if (podcast) {
-      this.db.appendOutbox("subscription.delete", { feedUrl: podcast.feedUrl });
-    }
+    this.db.transaction(() => {
+      const podcast = this.db.deletePodcast(podcastId);
+      if (podcast) this.db.appendOutbox("subscription.delete", { feedUrl: podcast.feedUrl });
+    });
   }
 
   async refresh(podcastId: string): Promise<PodcastSummary> {
@@ -44,13 +54,21 @@ export class LibraryService {
     }
 
     const { episodes, podcast } = await this.rss.fetchFeed(existing.feedUrl);
-    const refreshedPodcast = {
-      ...podcast,
-      subscriptionDate: existing.subscriptionDate,
-    };
-    this.db.upsertPodcast(refreshedPodcast);
-    this.db.upsertEpisodes(episodes);
-    return refreshedPodcast;
+    return this.db.transaction(() => {
+      // A feed removed during the request must not be silently resubscribed.
+      const current = this.db.getPodcast(podcastId);
+      if (!current) throw new Error("Podcast not found");
+      const plan = applyLibrary({
+        kind: "subscription",
+        feedUrl: podcast.feedUrl,
+        existingDate: current.subscriptionDate,
+        fetchedAt: podcast.lastUpdated ?? new Date().toISOString(),
+      });
+      const refreshedPodcast = { ...podcast, subscriptionDate: plan.subscriptionDate };
+      this.db.upsertPodcast(refreshedPodcast);
+      this.db.upsertEpisodes(episodes);
+      return refreshedPodcast;
+    });
   }
 
   async listEpisodesByPodcast(podcastId: string): Promise<EpisodeSummary[]> {

@@ -1,6 +1,7 @@
 //! Platform-independent podcast domain logic. Hosts supply I/O and timestamps.
 
 mod feed;
+mod library;
 #[cfg(not(target_arch = "wasm32"))]
 mod native;
 
@@ -27,4 +28,16 @@ pub fn parse_feed_json(request: &str) -> String {
         Err(error) => Response::Failure { error },
     };
     serde_json::to_string(&response).expect("feed response is JSON serializable")
+}
+
+/// Apply a local library command without I/O.
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen)]
+pub fn library_json(request: &str) -> String {
+    let result = serde_json::from_str::<library::LibraryRequest>(request)
+        .map_err(|error| format!("Invalid request: {error}"))
+        .and_then(library::apply);
+    match result {
+        Ok(value) => serde_json::json!({"value": value}).to_string(),
+        Err(error) => serde_json::json!({"error": error}).to_string(),
+    }
 }

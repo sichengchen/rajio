@@ -97,6 +97,10 @@ export class LocalDatabase {
     }
   }
 
+  transaction<T>(operation: () => T): T {
+    return this.db.transaction(operation)();
+  }
+
   close(): void {
     this.db.close();
   }

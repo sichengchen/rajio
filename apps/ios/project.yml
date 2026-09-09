@@ -39,6 +39,7 @@ targets:
           - $(SRCROOT)/../../crates/rajio-core/src/lib.rs
           - $(SRCROOT)/../../crates/rajio-core/src/feed.rs
           - $(SRCROOT)/../../crates/rajio-core/src/native.rs
+          - $(SRCROOT)/../../crates/rajio-core/src/library.rs
           - $(SRCROOT)/../../scripts/build-core-ios.sh
         outputFiles:
           - $(SRCROOT)/../../target/ios-simulator/librajio_core.a

@@ -36,3 +36,25 @@ export interface ParsedFeed {
 
 export function initializeCore(module: BufferSource | WebAssembly.Module): void;
 export function parseFeed(request: ParseFeedRequest): ParsedFeed;
+
+export function applyLibrary(request: {
+  kind: "subscription";
+  feedUrl: string;
+  existingDate?: string | null;
+  fetchedAt: string;
+}): { subscriptionDate: string; isNew: boolean };
+export function applyLibrary(request: {
+  kind: "checkpoint";
+  episodeId: string;
+  position: number;
+  duration: number;
+  updatedAt: string;
+}): { episodeId: string; position: number; duration: number; updatedAt: string };
+export function applyLibrary(request: {
+  kind: "collection";
+  ids: string[];
+  episodeId: string;
+  included: boolean;
+  index?: number;
+}): string[];
+export function applyLibrary(request: { kind: "importOpml"; xml: string }): string[];

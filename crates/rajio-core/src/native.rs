@@ -6,13 +6,26 @@ use std::ffi::{c_char, CStr, CString};
 /// A non-null request must point to a readable NUL-terminated string for this call.
 #[no_mangle]
 pub unsafe extern "C" fn rajio_core_parse_feed(request: *const c_char) -> *mut c_char {
+    unsafe { call(request, crate::parse_feed_json) }
+}
+
+/// Apply a JSON library command. Free the response with `rajio_core_free`.
+///
+/// # Safety
+/// A non-null request must point to a readable NUL-terminated string for this call.
+#[no_mangle]
+pub unsafe extern "C" fn rajio_core_library(request: *const c_char) -> *mut c_char {
+    unsafe { call(request, crate::library_json) }
+}
+
+unsafe fn call(request: *const c_char, operation: fn(&str) -> String) -> *mut c_char {
     let response = std::panic::catch_unwind(|| {
         if request.is_null() {
             return r#"{"error":"Missing request"}"#.to_owned();
         }
         // SAFETY: the caller supplies a readable NUL-terminated string.
         match unsafe { CStr::from_ptr(request) }.to_str() {
-            Ok(request) => crate::parse_feed_json(request),
+            Ok(request) => operation(request),
             Err(_) => r#"{"error":"Request must be UTF-8"}"#.to_owned(),
         }
     })

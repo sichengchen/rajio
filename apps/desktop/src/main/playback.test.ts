@@ -160,3 +160,31 @@ function seedEpisode(db: LocalDatabase): void {
     },
   ]);
 }
+
+test("invalid progress and failed outbox writes leave the previous checkpoint intact", async () => {
+  const db = createTestDatabase();
+  seedEpisode(db);
+  const playback = new PlaybackService(db);
+  const progress = {
+    episodeId: "episode_1",
+    podcastId: "podcast_1",
+    currentTime: 10,
+    duration: 100,
+    isCompleted: false,
+  };
+  try {
+    await playback.saveProgress(progress);
+    await assert.rejects(
+      playback.saveProgress({ ...progress, currentTime: -1 }),
+      /Invalid playback/,
+    );
+    db.appendOutbox = () => {
+      throw new Error("Injected outbox failure");
+    };
+    await assert.rejects(playback.saveProgress({ ...progress, currentTime: 20 }), /Injected/);
+    assert.equal(db.getPlaybackProgress("episode_1")?.currentTime, 10);
+    assert.equal(db.listOutbox().length, 1);
+  } finally {
+    db.close();
+  }
+});

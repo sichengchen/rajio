@@ -8,7 +8,11 @@
       "types": "./src/index.d.ts",
       "default": "./src/index.js"
     },
-    "./module": "./generated/rajio_core_bg.wasm"
+    "./module": "./generated/rajio_core_bg.wasm",
+    "./node": {
+      "types": "./src/index.d.ts",
+      "default": "./src/node.js"
+    }
   },
   "scripts": {
     "build": "node ../../scripts/build-core-wasm.mjs",

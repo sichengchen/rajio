@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
@@ -34,3 +35,9 @@ run("wasm-bindgen", [
   "--out-name",
   "rajio_core",
 ]);
+
+// An embedded Node entry keeps Electron's packaged CJS independent of asset paths.
+writeFileSync(
+  resolve(root, "packages/core-wasm/generated/bytes.js"),
+  `export default ${JSON.stringify(readFileSync(resolve(root, "packages/core-wasm/generated/rajio_core_bg.wasm")).toString("base64"))};\n`,
+);

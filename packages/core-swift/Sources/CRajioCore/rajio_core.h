@@ -7,3 +7,4 @@ char *rajio_core_parse_feed(const char *request);
 void rajio_core_free(char *response);
 
 #endif
+char *rajio_core_library(const char *request);
