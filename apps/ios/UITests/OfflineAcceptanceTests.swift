@@ -74,13 +74,13 @@ final class OfflineAcceptanceTests: XCTestCase {
 
   func testTabsAndLibraryCollections() {
     subscribe()
-    app.tabBars.buttons["Home"].tap()
+    app.buttons["Home"].firstMatch.tap()
     XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
     capture("home")
-    app.tabBars.buttons["Search"].tap()
+    app.buttons["Search"].firstMatch.tap()
     XCTAssertTrue(app.navigationBars["Search"].waitForExistence(timeout: 5))
     capture("search")
-    app.tabBars.buttons["Library"].tap()
+    app.buttons["Library"].firstMatch.tap()
     app.buttons["Favorites"].tap()
     XCTAssertTrue(app.navigationBars["Favorites"].waitForExistence(timeout: 5))
     app.navigationBars.buttons.element(boundBy: 0).tap()

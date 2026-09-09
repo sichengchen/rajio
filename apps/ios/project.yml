@@ -64,6 +64,16 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
 
+  RajioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: Rajio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scchan.rajio.tests
+
   RajioUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -81,5 +91,8 @@ schemes:
       targets:
         Rajio: all
         RajioUITests: [test]
+        RajioTests: [test]
     test:
-      targets: [RajioUITests]
+      targets: [RajioUITests, RajioTests]
+      environmentVariables:
+        RAJIO_TEST_LIBRARY: 52C55C7C-1F86-481C-9362-61EC4EB98680

@@ -15,10 +15,9 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
   private var restoration: Task<Void, Never>?
   private var starting = Set<String>()
   private var reservedBytes: Int64 = 0
+  private let sessionIdentifier: String
   private lazy var session: URLSession = {
-    let configuration = URLSessionConfiguration.background(
-      withIdentifier: "com.scchan.rajio.downloads"
-        + (ProcessInfo.processInfo.environment["RAJIO_TEST_LIBRARY"].map { "." + $0 } ?? ""))
+    let configuration = URLSessionConfiguration.background(withIdentifier: sessionIdentifier)
     configuration.sessionSendsLaunchEvents = true
     configuration.isDiscretionary = false
     configuration.httpMaximumConnectionsPerHost = 2
@@ -26,9 +25,12 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
     return URLSession(configuration: configuration, delegate: self, delegateQueue: .main)
   }()
 
-  init(database: LibraryDatabase) {
+  init(database: LibraryDatabase, folder: URL = DownloadManager.downloadFolder,
+       sessionIdentifier: String = "com.scchan.rajio.downloads"
+        + (ProcessInfo.processInfo.environment["RAJIO_TEST_LIBRARY"].map { "." + $0 } ?? "")) {
     self.database = database
-    folder = Self.downloadFolder
+    self.folder = folder
+    self.sessionIdentifier = sessionIdentifier
     super.init()
   }
 
