@@ -29,7 +29,7 @@ struct PlayerView: View {
               .labelStyle(.iconOnly).font(.headline).foregroundStyle(.secondary).frame(
                 width: 60, height: 32)
             if let episode = audio.episode {
-              Artwork(url: episode.imageUrl, size: min(geometry.size.width - 64, 360))
+              Artwork(url: episode.imageUrl, size: max(0, min(geometry.size.width - 64, 360)))
                 .shadow(color: .black.opacity(0.2), radius: 22, y: 12)
                 .padding(.bottom, 12)
               HStack(alignment: .center, spacing: 12) {
