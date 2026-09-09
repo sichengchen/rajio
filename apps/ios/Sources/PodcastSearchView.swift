@@ -20,7 +20,7 @@ struct PodcastSearchView: View {
         }.pickerStyle(.segmented)
         if query.isEmpty {
           VStack(alignment: .leading, spacing: 12) {
-            Text("Find your next favorite.").font(.largeTitle.bold())
+            Text("Find your next favorite.").font(.title3.weight(.semibold))
             Text("Search shows by title, creator, or topic.").foregroundStyle(.secondary)
           }.padding(.vertical, 24)
           Button {
@@ -48,8 +48,8 @@ struct PodcastSearchView: View {
             HStack(spacing: 14) {
               Artwork(url: podcast.artworkUrl100, size: 76)
               VStack(alignment: .leading, spacing: 5) {
-                Text(podcast.collectionName).font(.headline).lineLimit(2)
-                Text(podcast.artistName ?? "").font(.subheadline).foregroundStyle(.secondary)
+                Text(podcast.collectionName).font(.body.weight(.medium)).lineLimit(2)
+                Text(podcast.artistName ?? "").font(.footnote).foregroundStyle(.secondary)
                   .lineLimit(1)
               }.frame(maxWidth: .infinity, alignment: .leading)
               let followed =
@@ -73,7 +73,7 @@ struct PodcastSearchView: View {
           }
         }
       }.padding(20)
-    }.navigationTitle("Search")
+    }.navigationTitle("Search").navigationBarTitleDisplayMode(.inline)
       .searchable(text: $query, prompt: "Search podcasts")
       .onSubmit(of: .search, search)
       .onChange(of: query) { _, _ in search() }

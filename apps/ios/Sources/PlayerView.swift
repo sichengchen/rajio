@@ -24,19 +24,19 @@ struct PlayerView: View {
           .ignoresSafeArea()
         }
         ScrollView {
-          VStack(spacing: 26) {
+          VStack(spacing: 20) {
             Button("Done", systemImage: "chevron.down") { dismiss() }
               .labelStyle(.iconOnly).font(.headline).foregroundStyle(.secondary).frame(
-                width: 60, height: 32)
+                width: 60, height: 44)
             if let episode = audio.episode {
               Artwork(url: episode.imageUrl, size: max(0, min(geometry.size.width - 64, 360)))
                 .shadow(color: .black.opacity(0.2), radius: 22, y: 12)
                 .padding(.bottom, 12)
               HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                  Text(episode.title).font(.title2.bold()).lineLimit(3)
+                  Text(episode.title).font(.title3.weight(.semibold)).lineLimit(3)
                   Text(model.podcasts.first { $0.id == episode.podcastId }?.title ?? "")
-                    .font(.title3).foregroundStyle(.secondary).lineLimit(1)
+                    .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 Menu("Episode actions", systemImage: "ellipsis") {
                   EpisodeMenu(episode: episode, model: model, audio: audio)
@@ -75,7 +75,7 @@ struct PlayerView: View {
                 speedMenu
                 Spacer()
                 Button("Back 30 seconds", systemImage: "gobackward.30") { audio.seek(by: -30) }
-                  .font(.system(size: 30))
+                  .font(.system(size: 26)).frame(width: 44, height: 44)
                 Spacer()
                 Button {
                   audio.isPlaying ? audio.pause() : audio.resume()
@@ -87,12 +87,12 @@ struct PlayerView: View {
                   .accessibilityIdentifier("player-toggle")
                 Spacer()
                 Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }
-                  .font(.system(size: 30)).accessibilityIdentifier("player-forward")
+                  .font(.system(size: 26)).frame(width: 44, height: 44).accessibilityIdentifier("player-forward")
                 Spacer()
                 Button("Next Episode", systemImage: "forward.end.fill") {
                   Task { await audio.playNext() }
                 }
-                .font(.body).disabled(model.queue.isEmpty)
+                .font(.body).frame(width: 44, height: 44).disabled(model.queue.isEmpty)
               }.labelStyle(.iconOnly).buttonStyle(.plain).padding(.vertical, 4)
               VolumeControl().frame(height: 34).accessibilityLabel("Volume")
               HStack {
@@ -138,7 +138,7 @@ struct PlayerView: View {
     } label: {
       Text(audio.speed.formatted(.number.locale(L10n.locale)) + "×").font(
         .subheadline.weight(.semibold)
-      ).frame(minWidth: 32, minHeight: 44)
+      ).frame(minWidth: 44, minHeight: 44)
     }
     .accessibilityLabel("Playback speed")
   }

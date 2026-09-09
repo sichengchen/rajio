@@ -12,7 +12,7 @@ struct HomeView: View {
         if model.podcasts.isEmpty { WelcomeView(adding: $adding) }
         if let episode = audio.episode {
           VStack(alignment: .leading, spacing: 16) {
-            Text("Continue Listening").font(.title2.bold())
+            Text("Continue Listening").font(.headline)
             Button {
               fullPlayer = true
             } label: {
@@ -22,7 +22,7 @@ struct HomeView: View {
                   Text(model.podcasts.first { $0.id == episode.podcastId }?.title ?? "").font(
                     .caption.weight(.semibold)
                   ).foregroundStyle(.secondary)
-                  Text(episode.title).font(.headline).lineLimit(3)
+                  Text(episode.title).font(.body.weight(.medium)).lineLimit(3)
                   ProgressView(value: min(audio.position / max(audio.duration, 1), 1)).tint(
                     RajioStyle.accent)
                   Text(Duration.seconds(audio.position).formatted(.time(pattern: .minuteSecond)))
@@ -35,7 +35,7 @@ struct HomeView: View {
         }
         if !model.episodes.isEmpty {
           VStack(alignment: .leading, spacing: 4) {
-            Text("Latest Episodes").font(.title2.bold()).padding(.bottom, 12)
+            Text("Latest Episodes").font(.headline).padding(.bottom, 12)
             ForEach(model.episodes.prefix(30), id: \.id) { episode in
               EpisodeRow(episode: episode, model: model, audio: audio)
               Divider().padding(.vertical, 8)
@@ -44,7 +44,7 @@ struct HomeView: View {
         }
         RefreshStatusView(model: model)
       }.padding(20)
-    }.navigationTitle("Home").refreshable { await model.refresh(force: true) }
+    }.navigationTitle("Home").navigationBarTitleDisplayMode(.inline).refreshable { await model.refresh(force: true) }
   }
 }
 
@@ -124,7 +124,7 @@ struct CollectionView: View {
           }
         }
       }.deleteDisabled(kind == "latest").moveDisabled(kind != "queue" || !query.isEmpty)
-    }.listStyle(.plain).navigationTitle(title)
+    }.listStyle(.plain).navigationTitle(title).navigationBarTitleDisplayMode(.inline)
       .searchable(text: $query, prompt: "Search library")
       .overlay {
         if episodes.isEmpty {
@@ -160,7 +160,7 @@ struct WelcomeView: View {
       Image(systemName: "headphones").font(.system(size: 58, weight: .light)).foregroundStyle(
         RajioStyle.accent
       ).padding(.top, 20)
-      Text("Your next great listen.").font(.title.bold()).multilineTextAlignment(.center)
+      Text("Your next great listen.").font(.title3.weight(.semibold)).multilineTextAlignment(.center)
       Text("Follow the shows you love. Take every episode with you.")
         .font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center)
       Button("Add Podcast") { adding = true }.nativeProminentControl().controlSize(.large)

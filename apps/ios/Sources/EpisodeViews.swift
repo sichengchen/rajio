@@ -12,10 +12,10 @@ struct ShowView: View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 0) {
         VStack(spacing: 16) {
-          Artwork(url: podcast.imageUrl, size: 224)
+          Artwork(url: podcast.imageUrl, size: 176)
             .shadow(color: .black.opacity(0.14), radius: 16, y: 8).padding(.top, 8)
           VStack(spacing: 6) {
-            Text(podcast.title).font(.title.bold()).multilineTextAlignment(.center)
+            Text(podcast.title).font(.title3.weight(.semibold)).multilineTextAlignment(.center)
             if let author = podcast.author {
               Text(author).font(.subheadline).foregroundStyle(.secondary)
             }
@@ -37,7 +37,7 @@ struct ShowView: View {
           Color(uiColor: .systemBackground))
         Divider()
         HStack {
-          Text("Episodes").font(.title2.bold())
+          Text("Episodes").font(.headline)
           Spacer()
           Text(L10n.episodeCount(episodes.count)).font(.caption).foregroundStyle(.secondary)
         }.padding(20)
@@ -79,8 +79,8 @@ struct EpisodeRow: View {
       } label: {
         VStack(alignment: .leading, spacing: 6) {
           EpisodeDate(episode: episode)
-          Text(episode.title).font(.headline).foregroundStyle(.primary).lineLimit(3)
-          Text(episode.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+          Text(episode.title).font(.body.weight(.medium)).foregroundStyle(.primary).lineLimit(3)
+          Text(episode.description).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
         }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
       }.buttonStyle(.plain).accessibilityLabel(episode.title)
       HStack {
@@ -113,7 +113,7 @@ struct EpisodeRow: View {
         Menu("Episode actions", systemImage: "ellipsis") {
           EpisodeMenu(episode: episode, model: model, audio: audio)
         }
-        .frame(width: 44, height: 36).foregroundStyle(.secondary)
+        .labelStyle(.iconOnly).frame(width: 44, height: 44).foregroundStyle(.secondary)
       }
     }.contextMenu { EpisodeMenu(episode: episode, model: model, audio: audio) }
   }
@@ -174,14 +174,14 @@ struct EpisodeDetailView: View {
             NavigationLink {
               ShowView(podcast: show, model: model, audio: audio)
             } label: {
-              Text(show.title).font(.headline).foregroundStyle(RajioStyle.accent)
+              Text(show.title).font(.subheadline.weight(.medium)).foregroundStyle(RajioStyle.accent)
             }
           }
           Spacer()
         }
         VStack(alignment: .leading, spacing: 10) {
           EpisodeDate(episode: episode)
-          Text(episode.title).font(.title.bold())
+          Text(episode.title).font(.title3.weight(.semibold))
         }
         Button {
           Task { await audio.play(episode) }
@@ -191,7 +191,7 @@ struct EpisodeDetailView: View {
         }.nativeProminentControl().controlSize(.large)
         DownloadControl(episode: episode)
         Divider()
-        Text("Episode Notes").font(.title2.bold())
+        Text("Episode Notes").font(.headline)
         ShowNotes(html: episode.content ?? episode.description, height: $notesHeight).frame(
           height: notesHeight)
       }.padding(24)

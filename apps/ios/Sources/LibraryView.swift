@@ -111,7 +111,7 @@ struct LibraryView: View {
   private var libraryTab: some View {
     NavigationStack {
       library
-        .navigationTitle(L10n.text("Library"))
+        .navigationTitle(L10n.text("Library")).navigationBarTitleDisplayMode(.inline)
         .toolbar {
           ToolbarItem(placement: .topBarTrailing) {
             Button("Add Podcast", systemImage: "plus") { adding = true }
@@ -139,27 +139,27 @@ struct LibraryView: View {
   }
 
   private var library: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 28) {
-        VStack(spacing: 0) {
-          collectionLink("Shows", icon: "square.stack", kind: "shows")
-          collectionLink("Favorites", icon: "heart", kind: "favorites")
-          collectionLink("Downloads", icon: "arrow.down.circle", kind: "downloads")
-          collectionLink("Latest Episodes", icon: "clock", kind: "latest")
-          collectionLink("Queue", icon: "text.line.first.and.arrowtriangle.forward", kind: "queue")
+    List {
+      Section {
+        collectionLink("Shows", icon: "square.stack", kind: "shows")
+        collectionLink("Favorites", icon: "heart", kind: "favorites")
+        collectionLink("Downloads", icon: "arrow.down.circle", kind: "downloads")
+        collectionLink("Latest Episodes", icon: "clock", kind: "latest")
+        collectionLink("Queue", icon: "text.line.first.and.arrowtriangle.forward", kind: "queue")
+      }
+      if model.podcasts.isEmpty {
+        WelcomeView(adding: $adding).listRowSeparator(.hidden)
+      } else {
+        Section {
+          ShowGrid(model: model, audio: audio, podcasts: model.podcasts, onRemove: remove)
+            .listRowSeparator(.hidden)
+        } header: {
+          Text("Recently Updated").font(.headline).foregroundStyle(.primary).textCase(nil)
         }
-        if model.podcasts.isEmpty {
-          WelcomeView(adding: $adding)
-        } else {
-          VStack(alignment: .leading, spacing: 16) {
-            Text("Recently Updated").font(.title2.bold())
-            ShowGrid(model: model, audio: audio, podcasts: model.podcasts, onRemove: remove)
-          }
-        }
-        RefreshStatusView(model: model)
-      }.padding(.horizontal, 20).padding(.bottom, 24)
+      }
+      RefreshStatusView(model: model).listRowSeparator(.hidden)
     }
-    .background(Color(uiColor: .systemBackground))
+    .listStyle(.plain)
     .refreshable { await model.refresh(force: true) }
   }
 
@@ -171,20 +171,17 @@ struct LibraryView: View {
           ShowGrid(model: model, audio: audio, podcasts: model.podcasts, onRemove: remove).padding(
             20)
         }
-        .navigationTitle("Shows")
+        .navigationTitle("Shows").navigationBarTitleDisplayMode(.inline)
       } else {
         CollectionView(kind: kind, title: title, model: model, audio: audio)
       }
     } label: {
-      HStack(spacing: 16) {
-        Image(systemName: icon).font(.title2).foregroundStyle(RajioStyle.accent).frame(width: 28)
-        Text(title).font(.title3).foregroundStyle(.primary)
-        Spacer()
-        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(
-          .tertiary)
-      }.padding(.vertical, 13).contentShape(Rectangle())
-    }.buttonStyle(.plain)
-      .overlay(alignment: .bottom) { Divider().padding(.leading, 44) }
+      Label {
+        Text(title).font(.body).foregroundStyle(.primary)
+      } icon: {
+        Image(systemName: icon).foregroundStyle(RajioStyle.accent)
+      }
+    }
   }
 
   private func remove(_ podcast: Podcast) {
