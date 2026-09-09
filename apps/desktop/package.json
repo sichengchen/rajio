@@ -1,6 +1,6 @@
 {
   "name": "@rajio-app/desktop",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "description": "New podCast player: Listen and Explore.",
   "type": "module",
