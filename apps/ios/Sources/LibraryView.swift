@@ -1,14 +1,17 @@
 import RajioCore
 import RajioLibrary
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct LibraryView: View {
   @StateObject private var model: LibraryModel
   @StateObject private var audio: AudioPlayer
   @State private var adding = false
-  @State private var feedURL = ""
-  @State private var scrubPosition: Double = 0
-  @State private var isScrubbing = false
+  @State private var importing = false
+  @State private var exporting = false
+  @State private var fullPlayer = false
+  @State private var section = "all"
+  @State private var query = ""
   @Environment(\.scenePhase) private var phase
 
   init(database: LibraryDatabase) {
@@ -18,7 +21,7 @@ struct LibraryView: View {
 
   var body: some View {
     NavigationStack {
-      Group {
+      List {
         if model.podcasts.isEmpty {
           ContentUnavailableView {
             Label("Welcome to Rajio", systemImage: "radio")
@@ -27,57 +30,162 @@ struct LibraryView: View {
           } actions: {
             Button("Add Podcast") { adding = true }.buttonStyle(.borderedProminent)
           }
+          .listRowBackground(Color.clear)
         } else {
-          List(model.podcasts, id: \.id) { podcast in
-            NavigationLink {
-              EpisodeListView(podcast: podcast, model: model, audio: audio)
-            } label: {
-              Label(podcast.title, systemImage: "podcasts")
-            }
-            .swipeActions {
-              Button("Unsubscribe", role: .destructive) { Task { await model.remove(podcast) } }
-            }
+          Section {
+            Picker("Library filter", selection: $section) {
+              Text("Shows").tag("all")
+              Text("Favorites").tag("favorites")
+              Text("Queue").tag("queue")
+            }.pickerStyle(.segmented)
           }
-        }
-      }
-      .navigationTitle("Library")
-      .toolbar { Button("Add Podcast", systemImage: "plus") { adding = true } }
-      .sheet(isPresented: $adding) {
-        NavigationStack {
-          Form {
-            TextField("Feed URL", text: $feedURL).keyboardType(.URL).textInputAutocapitalization(
-              .never
-            ).autocorrectionDisabled()
-            if model.isLoading { ProgressView("Adding podcast…") }
-            if let error = model.error { Text(error).foregroundStyle(.red) }
-          }
-          .navigationTitle("Add Podcast")
-          .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { adding = false } }
-            ToolbarItem(placement: .confirmationAction) {
-              Button("Add") {
-                Task {
-                  if await model.subscribe(feedURL) {
-                    adding = false
-                    feedURL = ""
+          if section == "all" {
+            ForEach(
+              model.podcasts.filter {
+                query.isEmpty || $0.title.localizedCaseInsensitiveContains(query)
+              }, id: \.id
+            ) { podcast in
+              NavigationLink {
+                ShowView(podcast: podcast, model: model, audio: audio)
+              } label: {
+                HStack {
+                  Artwork(url: podcast.imageUrl, size: 56)
+                  VStack(alignment: .leading, spacing: 4) {
+                    Text(podcast.title).font(.headline)
+                    if let author = podcast.author {
+                      Text(author).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                  }
+                }.padding(.vertical, 3)
+              }
+              .swipeActions {
+                Button("Unsubscribe", role: .destructive) { Task { await model.remove(podcast) } }
+              }
+            }
+          } else {
+            let ids = section == "queue" ? model.queue : model.favorites
+            ForEach(
+              ids.compactMap { id in model.episodes.first { $0.id == id } }.filter {
+                query.isEmpty || $0.title.localizedCaseInsensitiveContains(query)
+              }, id: \.id
+            ) { episode in
+              EpisodeRow(episode: episode, model: model, audio: audio)
+            }
+            .onDelete { offsets in
+              let displayed = ids.compactMap { id in model.episodes.first { $0.id == id } }.filter {
+                query.isEmpty || $0.title.localizedCaseInsensitiveContains(query)
+              }
+              Task {
+                for index in offsets {
+                  await model.setCollection(section, episode: displayed[index], included: false)
+                }
+              }
+            }
+            .onMove { offsets, destination in
+              var moved = ids
+              moved.move(fromOffsets: offsets, toOffset: destination)
+              Task {
+                for (index, id) in moved.enumerated() {
+                  if let episode = model.episodes.first(where: { $0.id == id }) {
+                    await model.setCollection(
+                      section, episode: episode, included: true, index: index)
                   }
                 }
               }
-              .disabled(
-                model.isLoading || feedURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .moveDisabled(!query.isEmpty)
+            if ids.isEmpty { Text("No episodes").foregroundStyle(.secondary) }
+          }
+        }
+        if model.isRefreshing { ProgressView("Refreshing podcasts…") }
+        if !model.refreshFailures.isEmpty {
+          Section("Refresh status") {
+            ForEach(model.refreshFailures, id: \.self) {
+              Text($0).font(.caption).foregroundStyle(.secondary)
+            }
+            Button("Retry") { Task { await model.refresh(force: true) } }
+          }
+        }
+      }
+      .searchable(
+        text: $query, placement: .navigationBarDrawer(displayMode: .always),
+        prompt: "Search library"
+      )
+      .navigationTitle("Library")
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Menu("Library actions", systemImage: "ellipsis.circle") {
+            Button("Import OPML", systemImage: "square.and.arrow.down") { importing = true }
+            Button("Export OPML", systemImage: "square.and.arrow.up") { exporting = true }.disabled(
+              model.podcasts.isEmpty)
+            Button("Refresh podcasts", systemImage: "arrow.clockwise") {
+              Task { await model.refresh(force: true) }
             }
           }
         }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Add Podcast", systemImage: "plus") { adding = true }
+        }
+        ToolbarItem(placement: .topBarTrailing) { if section == "queue" { EditButton() } }
+      }
+      .refreshable { await model.refresh(force: true) }
+      .sheet(isPresented: $adding) { AddPodcastView(model: model) }
+      .sheet(isPresented: $fullPlayer) { PlayerView(audio: audio, model: model) }
+      .fileImporter(isPresented: $importing, allowedContentTypes: [.xml, .data]) { result in
+        Task {
+          do {
+            let url = try result.get()
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            await model.importOPML(try Data(contentsOf: url))
+          } catch { model.error = error.localizedDescription }
+        }
+      }
+      .fileExporter(
+        isPresented: $exporting, document: OPMLDocument(text: model.exportOPML()),
+        contentType: .xml, defaultFilename: "Rajio.opml"
+      ) { result in
+        if case .failure(let error) = result { model.error = error.localizedDescription }
       }
       .task {
         await model.reload()
         await audio.restore()
+        await model.refresh()
       }
       .onChange(of: phase) { _, value in
-        if value != .active { Task { await audio.checkpoint() } }
+        Task {
+          if value == .active { await model.refresh() } else { await audio.checkpoint() }
+        }
       }
     }
-    .safeAreaInset(edge: .bottom) { playerBar }
+    .safeAreaInset(edge: .bottom) {
+      if let episode = audio.episode {
+        HStack(spacing: 12) {
+          Button {
+            fullPlayer = true
+          } label: {
+            HStack {
+              Artwork(url: episode.imageUrl, size: 44)
+              VStack(alignment: .leading) {
+                Text(episode.title).font(.subheadline).lineLimit(2)
+                if audio.isLoading {
+                  Text("Loading audio…").font(.caption).foregroundStyle(.secondary)
+                }
+              }
+            }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+          }.buttonStyle(.plain).accessibilityHint("Open player")
+          Button {
+            audio.isPlaying ? audio.pause() : audio.resume()
+          } label: {
+            Label(
+              audio.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
+              systemImage: audio.isPlaying ? "pause.fill" : "play.fill")
+          }.labelStyle(.iconOnly).font(.title2).padding(8)
+          Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }
+            .labelStyle(.iconOnly).padding(8)
+        }.padding(.horizontal).padding(.vertical, 10).background(.regularMaterial)
+      }
+    }
     .alert(
       "Something went wrong",
       isPresented: Binding(
@@ -96,87 +204,32 @@ struct LibraryView: View {
     } message: {
       Text(model.error ?? audio.error ?? "")
     }
-
-  }
-
-  @ViewBuilder
-  private var playerBar: some View {
-    if let episode = audio.episode {
-      VStack(spacing: 8) {
-        if audio.isLoading { ProgressView("Loading audio…") }
-        HStack {
-          Text(episode.title).font(.subheadline).lineLimit(1)
-          Spacer()
-          Button("Back 30 seconds", systemImage: "gobackward.30") { audio.seek(by: -30) }
-            .labelStyle(.iconOnly)
-          Button {
-            if audio.isPlaying { audio.pause() } else { audio.resume() }
-          } label: {
-            Label(
-              audio.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
-              systemImage: audio.isPlaying ? "pause.fill" : "play.fill")
-          }.labelStyle(.iconOnly)
-          Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }
-            .labelStyle(.iconOnly)
-        }
-        if audio.duration > 0 {
-          Slider(
-            value: Binding(
-              get: { isScrubbing ? scrubPosition : audio.position }, set: { scrubPosition = $0 }),
-            in: 0...max(audio.duration, audio.position),
-            onEditingChanged: { editing in
-              if editing {
-                scrubPosition = audio.position
-                isScrubbing = true
-              } else {
-                isScrubbing = false
-                audio.seek(to: scrubPosition)
-              }
-            }
-          )
-          .accessibilityLabel("Playback position")
-          HStack {
-            Text(Duration.seconds(audio.position).formatted(.time(pattern: .hourMinuteSecond)))
-            Spacer()
-            Text(Duration.seconds(audio.duration).formatted(.time(pattern: .hourMinuteSecond)))
-          }.font(.caption.monospacedDigit()).foregroundStyle(.secondary)
-        }
-      }.padding().background(.regularMaterial)
-    }
   }
 }
 
-private struct EpisodeListView: View {
-  let podcast: Podcast
-  @ObservedObject var model: LibraryModel
-  @ObservedObject var audio: AudioPlayer
-  @State private var episodes: [Episode] = []
+struct Artwork: View {
+  let url: String?
+  let size: CGFloat
   var body: some View {
-    List(episodes, id: \.id) { episode in
-      Button {
-        Task { await audio.play(episode) }
-      } label: {
-        VStack(alignment: .leading, spacing: 6) {
-          Text(episode.title).font(.headline).foregroundStyle(.primary)
-          if let date = episode.publishedAt.flatMap({ ISO8601DateFormatter().date(from: $0) }) {
-            Text(date, style: .date).font(.caption).foregroundStyle(.secondary)
-          }
-        }.padding(.vertical, 4)
-      }
+    AsyncImage(url: url.flatMap(URL.init(string:))) { image in
+      image.resizable().scaledToFill()
+    } placeholder: {
+      Image(systemName: "waveform").font(.title2).frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.quaternary)
     }
-    .overlay {
-      if episodes.isEmpty { ContentUnavailableView("No episodes", systemImage: "headphones") }
-    }
-    .navigationTitle(podcast.title)
-    .task { await load() }
-    .refreshable {
-      _ = await model.subscribe(podcast.feedUrl)
-      await load()
-    }
+    .frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: size * 0.15))
+    .accessibilityHidden(true)
   }
-  private func load() async {
-    do { episodes = try await model.database.episodes(podcastId: podcast.id) } catch {
-      model.error = error.localizedDescription
-    }
+}
+
+struct OPMLDocument: FileDocument {
+  static var readableContentTypes: [UTType] { [.xml, .data] }
+  var text: String
+  init(text: String) { self.text = text }
+  init(configuration: ReadConfiguration) throws {
+    text = String(decoding: configuration.file.regularFileContents ?? Data(), as: UTF8.self)
+  }
+  func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    FileWrapper(regularFileWithContents: Data(text.utf8))
   }
 }

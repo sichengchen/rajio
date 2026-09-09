@@ -146,4 +146,94 @@ final class LibraryTests: XCTestCase {
     XCTAssertNil(cleared)
   }
 
+  func testCollectionsAndDownloadStateSurviveReopenAndRollback() async throws {
+    let fixture = try XCTUnwrap(fixtures().first { !$0.expected.episodes.isEmpty })
+    let path = temporaryPath()
+    defer { try? FileManager.default.removeItem(atPath: path) }
+    let db = try LibraryDatabase(path: path)
+    try await db.ingest(
+      feedUrl: fixture.request.feedUrl, xml: fixture.request.xml,
+      fetchedAt: fixture.request.fetchedAt)
+    let episode = fixture.expected.episodes[0]
+    try await db.updateCollection(
+      "queue", episodeId: episode.id, included: true, at: fixture.request.fetchedAt)
+    try await db.updateCollection(
+      "queue", episodeId: episode.id, included: true, at: fixture.request.fetchedAt)
+    try await db.saveDownload(
+      DownloadRecord(
+        episodeId: episode.id, status: "downloaded", progress: 1, fileName: "episode.mp3",
+        bytes: 100))
+    let reopened = try LibraryDatabase(path: path)
+    let ids = try await reopened.collection("queue")
+    let downloads = try await reopened.downloads()
+    XCTAssertEqual(ids, [episode.id])
+    XCTAssertEqual(downloads.first?.bytes, 100)
+    let injection = try DatabaseQueue(path: path)
+    try await injection.write { db in
+      try db.execute(
+        sql:
+          "CREATE TRIGGER fail_outbox BEFORE INSERT ON outbox BEGIN SELECT RAISE(ABORT, 'injected failure'); END"
+      )
+    }
+    do {
+      try await reopened.updateCollection(
+        "queue", episodeId: episode.id, included: false, at: fixture.request.fetchedAt)
+      XCTFail("Expected rollback")
+    } catch {}
+    let unchanged = try await reopened.collection("queue")
+    XCTAssertEqual(unchanged, [episode.id])
+  }
+
+  func testRefreshCannotResurrectUnsubscribedFeed() async throws {
+    let fixture = try XCTUnwrap(fixtures().first)
+    let path = temporaryPath()
+    defer { try? FileManager.default.removeItem(atPath: path) }
+    let db = try LibraryDatabase(path: path)
+    do {
+      try await db.ingest(
+        feedUrl: fixture.request.feedUrl, xml: fixture.request.xml,
+        fetchedAt: fixture.request.fetchedAt, existingOnly: true)
+      XCTFail("Refresh must require an existing subscription")
+    } catch {}
+    let podcasts = try await db.podcasts()
+    XCTAssertTrue(podcasts.isEmpty)
+  }
+
+  func testRefreshMergesDuplicateIdentityAndPreservesListeningState() async throws {
+    let fixture = try XCTUnwrap(fixtures().first { !$0.expected.episodes.isEmpty })
+    let path = temporaryPath()
+    defer { try? FileManager.default.removeItem(atPath: path) }
+    let db = try LibraryDatabase(path: path)
+    try await db.ingest(
+      feedUrl: fixture.request.feedUrl, xml: fixture.request.xml,
+      fetchedAt: fixture.request.fetchedAt)
+    let episode = fixture.expected.episodes[0]
+    var duplicate =
+      try JSONSerialization.jsonObject(with: JSONEncoder().encode(episode)) as! [String: Any]
+    duplicate["id"] = "old-duplicate"
+    let record = try JSONSerialization.data(withJSONObject: duplicate)
+    let injection = try DatabaseQueue(path: path)
+    try await injection.write { sql in
+      try sql.execute(
+        sql: "INSERT INTO episodes VALUES (?, ?, ?, ?)",
+        arguments: ["old-duplicate", episode.podcastId, episode.publishedAt, record])
+    }
+    try await db.saveProgress(
+      episodeId: "old-duplicate", position: 37, duration: 100, at: fixture.request.fetchedAt)
+    try await db.selectEpisode("old-duplicate")
+    try await db.updateCollection(
+      "queue", episodeId: "old-duplicate", included: true, at: fixture.request.fetchedAt)
+    try await db.ingest(
+      feedUrl: fixture.request.feedUrl, xml: fixture.request.xml,
+      fetchedAt: fixture.request.fetchedAt)
+    let progress = try await db.progress(episodeId: episode.id)
+    let selected = try await db.selectedEpisode()
+    let queue = try await db.collection("queue")
+    let removed = try await db.episode(id: "old-duplicate")
+    XCTAssertEqual(progress?.position, 37)
+    XCTAssertEqual(selected?.id, episode.id)
+    XCTAssertEqual(queue, [episode.id])
+    XCTAssertNil(removed)
+  }
+
 }

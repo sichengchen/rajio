@@ -354,3 +354,44 @@ test("shared feed fixtures preserve identities and progress across adapter reope
     }
   }
 });
+
+test("feed reorder keeps episode IDs and merges older duplicate checkpoints", async () => {
+  const db = createTestDatabase();
+  seedPodcast(db, "podcast_1", "Feed");
+  db.upsertEpisodes([
+    {
+      audioUrl: "https://example.com/episode.mp3",
+      id: "duplicate",
+      podcastId: "podcast_1",
+      title: "Duplicate",
+    },
+  ]);
+  db.savePlaybackProgress({
+    episodeId: "duplicate",
+    podcastId: "podcast_1",
+    currentTime: 37,
+    duration: 100,
+    isCompleted: false,
+  });
+  const updated = feed({
+    episodes: [
+      {
+        audioUrl: "https://example.com/episode.mp3",
+        id: "new-positional-id",
+        podcastId: "podcast_1",
+        title: "Updated",
+      },
+    ],
+  });
+  try {
+    await new LibraryService(db, feedReader(updated)).refresh("podcast_1");
+    assert.deepEqual(
+      db.listEpisodes().map((e) => e.id),
+      ["episode_1"],
+    );
+    assert.equal(db.getPlaybackProgress("episode_1")?.currentTime, 37);
+    assert.equal(db.getEpisode("episode_1")?.title, "Updated");
+  } finally {
+    db.close();
+  }
+});

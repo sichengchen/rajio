@@ -22,6 +22,7 @@ pub struct Podcast {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
+    #[serde(default)]
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_url: Option<String>,
@@ -39,6 +40,7 @@ pub struct Episode {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub guid: Option<String>,
     pub title: String,
+    #[serde(default)]
     pub description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,

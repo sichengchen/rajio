@@ -34,7 +34,7 @@ export class LibraryService {
       });
       const saved = { ...podcast, subscriptionDate: plan.subscriptionDate };
       this.db.upsertPodcast(saved);
-      this.db.upsertEpisodes(episodes);
+      this.db.reconcileEpisodes(podcast.id, episodes);
       if (plan.isNew) this.db.appendOutbox("subscription.upsert", { feedUrl: podcast.feedUrl });
       return saved;
     });
@@ -66,7 +66,7 @@ export class LibraryService {
       });
       const refreshedPodcast = { ...podcast, subscriptionDate: plan.subscriptionDate };
       this.db.upsertPodcast(refreshedPodcast);
-      this.db.upsertEpisodes(episodes);
+      this.db.reconcileEpisodes(podcast.id, episodes);
       return refreshedPodcast;
     });
   }

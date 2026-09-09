@@ -58,3 +58,9 @@ export function applyLibrary(request: {
   index?: number;
 }): string[];
 export function applyLibrary(request: { kind: "importOpml"; xml: string }): string[];
+
+export function applyLibrary(request: {
+  kind: "reconcileEpisodes";
+  incoming: Array<Omit<Episode, "description"> & { description?: string }>;
+  existing: Array<Omit<Episode, "description"> & { description?: string }>;
+}): { episodes: Episode[]; aliases: Record<string, string> };

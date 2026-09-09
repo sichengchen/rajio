@@ -25,6 +25,10 @@ pub enum LibraryRequest {
         included: bool,
         index: Option<usize>,
     },
+    ReconcileEpisodes {
+        incoming: Vec<crate::Episode>,
+        existing: Vec<crate::Episode>,
+    },
     ImportOpml {
         xml: String,
     },
@@ -97,6 +101,35 @@ pub fn apply(request: LibraryRequest) -> Result<serde_json::Value, String> {
                 result.insert(index.unwrap_or(result.len()).min(result.len()), episode_id);
             }
             Ok(json!(result))
+        }
+        LibraryRequest::ReconcileEpisodes { incoming, existing } => {
+            let mut result: Vec<crate::Episode> = Vec::new();
+            let same = |a: &crate::Episode, b: &crate::Episode| {
+                a.podcast_id == b.podcast_id
+                    && (a.audio_url == b.audio_url
+                        || a.guid
+                            .as_ref()
+                            .filter(|g| !g.is_empty())
+                            .is_some_and(|g| b.guid.as_ref() == Some(g)))
+            };
+            for mut episode in incoming {
+                if result.iter().any(|saved| same(saved, &episode)) {
+                    continue;
+                }
+                if let Some(saved) = existing.iter().find(|saved| same(saved, &episode)) {
+                    episode.id = saved.id.clone();
+                }
+                result.push(episode);
+            }
+            let mut aliases = std::collections::BTreeMap::new();
+            for old in &existing {
+                if let Some(canonical) = result.iter().find(|entry| same(entry, old)) {
+                    if canonical.id != old.id {
+                        aliases.insert(old.id.clone(), canonical.id.clone());
+                    }
+                }
+            }
+            Ok(json!({"episodes": result, "aliases": aliases}))
         }
         LibraryRequest::ImportOpml { xml } => {
             let document = roxmltree::Document::parse(&xml).map_err(|e| e.to_string())?;

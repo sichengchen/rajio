@@ -1,3 +1,4 @@
+import { applyLibrary } from "@rajio-app/core-wasm/node";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
@@ -537,6 +538,47 @@ export class LocalDatabase {
         episode.fileSize ?? null,
         episode.downloadedAt ?? null,
       );
+    }
+  }
+
+  reconcileEpisodes(podcastId: string, incoming: EpisodeSummary[]): void {
+    const existing = this.db
+      .prepare(
+        "SELECT id, podcast_id, audio_url, guid, title FROM episodes WHERE podcast_id=? ORDER BY rowid",
+      )
+      .all(podcastId)
+      .map(toEpisodeSummary);
+    const plan = applyLibrary({ kind: "reconcileEpisodes", incoming, existing });
+    this.upsertEpisodes(plan.episodes);
+    for (const [old, canonical] of Object.entries(plan.aliases)) {
+      this.db
+        .prepare(`INSERT INTO playback_progress SELECT ?, podcast_id, "current_time", duration, is_completed, last_played_at FROM playback_progress WHERE episode_id=?
+        ON CONFLICT(episode_id) DO UPDATE SET "current_time"=excluded."current_time", duration=excluded.duration, is_completed=excluded.is_completed, last_played_at=excluded.last_played_at WHERE excluded.last_played_at > playback_progress.last_played_at`)
+        .run(canonical, old);
+      this.db
+        .prepare(
+          `UPDATE episodes SET downloaded_path=(SELECT downloaded_path FROM episodes WHERE id=?), file_size=(SELECT file_size FROM episodes WHERE id=?), downloaded_at=(SELECT downloaded_at FROM episodes WHERE id=?) WHERE id=? AND downloaded_path IS NULL`,
+        )
+        .run(old, old, old, canonical);
+      // Persisted renderer collections store episode IDs in JSON arrays/objects.
+      const preferences = this.db.prepare("SELECT key, value FROM preferences").all() as {
+        key: string;
+        value: string;
+      }[];
+      for (const preference of preferences) {
+        try {
+          const replaced = JSON.stringify(JSON.parse(preference.value), (_key, value) =>
+            value === old ? canonical : value,
+          );
+          if (replaced !== preference.value)
+            this.db
+              .prepare("UPDATE preferences SET value=? WHERE key=?")
+              .run(replaced, preference.key);
+        } catch {
+          /* Non-JSON preferences do not contain episode collections. */
+        }
+      }
+      this.db.prepare("DELETE FROM episodes WHERE id=?").run(old);
     }
   }
 

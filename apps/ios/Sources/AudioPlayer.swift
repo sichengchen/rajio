@@ -11,6 +11,7 @@ final class AudioPlayer: ObservableObject {
   @Published private(set) var position: Double = 0
   @Published private(set) var duration: Double = 0
   @Published private(set) var isLoading = false
+  @Published private(set) var speed: Double = 1
   @Published var error: String?
   private let player = AVPlayer()
   private let database: LibraryDatabase
@@ -54,6 +55,17 @@ final class AudioPlayer: ObservableObject {
       }
     }
     let center = MPRemoteCommandCenter.shared()
+    center.changePlaybackPositionCommand.addTarget { [weak self] event in
+      guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+        return .commandFailed
+      }
+      Task { @MainActor in self?.seek(to: event.positionTime) }
+      return .success
+    }
+    center.nextTrackCommand.addTarget { [weak self] _ in
+      Task { @MainActor in await self?.playNext() }
+      return .success
+    }
     center.playCommand.addTarget { [weak self] _ in
       Task { @MainActor in self?.resume() }
       return .success
@@ -120,7 +132,9 @@ final class AudioPlayer: ObservableObject {
         let item = note.object as? AVPlayerItem
         Task { @MainActor in
           guard let self, self.player.currentItem === item else { return }
+          await self.checkpoint()
           self.pause()
+          await self.playNext()
         }
       })
   }
@@ -129,6 +143,11 @@ final class AudioPlayer: ObservableObject {
     guard !restored else { return }
     restored = true
     do {
+      if let stored = try await database.preference("playbackSpeed"), let speed = Double(stored),
+        (0.5...3).contains(speed)
+      {
+        self.speed = speed
+      }
       if let selected = try await database.selectedEpisode(), episode == nil {
         let saved = try await database.progress(episodeId: selected.id)
         guard episode == nil else { return }
@@ -153,6 +172,8 @@ final class AudioPlayer: ObservableObject {
     pause()
     requestID = UUID()
     let request = requestID
+    wantsPlayback = autoplay
+    isPlaying = autoplay
     await checkpoint()
     do {
       let saved = try await database.progress(episodeId: next.id)
@@ -166,9 +187,8 @@ final class AudioPlayer: ObservableObject {
       position = saved?.position ?? 0
       if let saved, saved.duration > 0, saved.position >= saved.duration - 0.5 { position = 0 }
       duration = saved?.duration ?? next.duration ?? 0
-      wantsPlayback = autoplay
-      isPlaying = autoplay
-      isLoading = autoplay
+      isPlaying = wantsPlayback
+      isLoading = wantsPlayback
       isSeeking = true
       let startPosition = position
       let item = AVPlayerItem(url: url)
@@ -221,7 +241,7 @@ final class AudioPlayer: ObservableObject {
     do {
       try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
       try AVAudioSession.sharedInstance().setActive(true)
-      player.play()
+      player.playImmediately(atRate: Float(speed))
       updateNowPlaying()
     } catch {
       wantsPlayback = false
@@ -287,13 +307,32 @@ final class AudioPlayer: ObservableObject {
 
   func checkpoint() async { await persist(checkpointSnapshot()) }
 
+  func setSpeed(_ value: Double) {
+    guard value.isFinite, (0.5...3).contains(value) else { return }
+    speed = value
+    if isPlaying { player.rate = Float(value) }
+    Task { try? await database.setPreference("playbackSpeed", value: String(value)) }
+    updateNowPlaying()
+  }
+
+  func playNext() async {
+    do {
+      guard let id = try await database.collection("queue").first,
+        let next = try await database.episode(id: id)
+      else { return }
+      try await database.updateCollection(
+        "queue", episodeId: id, included: false, at: Date().ISO8601Format())
+      await prepare(next, autoplay: true)
+    } catch { self.error = error.localizedDescription }
+  }
+
   private func updateNowPlaying() {
     guard let episode else { return }
     MPNowPlayingInfoCenter.default().nowPlayingInfo = [
       MPMediaItemPropertyTitle: episode.title,
       MPMediaItemPropertyPlaybackDuration: duration,
       MPNowPlayingInfoPropertyElapsedPlaybackTime: position,
-      MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+      MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? speed : 0.0,
     ]
   }
 }
