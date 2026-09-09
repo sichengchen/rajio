@@ -1,5 +1,6 @@
 "use client";
 
+import { desktopApi } from "@/desktop-api";
 import { useOpenEpisode } from "@/hooks/use-open-episode";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, Rewind, FastForward, Volume2, Info, ListMusic } from "lucide-react";
@@ -46,6 +47,21 @@ export function AudioPlayer() {
 
   const { currentEpisode, isPlaying, currentTime, duration, volume, seekRequested } = playbackState;
   isPlayingRef.current = isPlaying;
+
+  useEffect(
+    () =>
+      desktopApi.playback.onCheckpointRequested?.(async () => {
+        const audio = audioRef.current;
+        const episode = usePodcastStore.getState().playbackState.currentEpisode;
+        if (audio && episode && Number.isFinite(audio.duration)) {
+          audio.pause();
+          await usePodcastStore
+            .getState()
+            .saveProgress(episode.id, audio.currentTime, audio.duration);
+        }
+      }),
+    [],
+  );
 
   // Get current podcast info
   const currentPodcast = currentEpisode

@@ -1,7 +1,7 @@
 import { parseFeed } from "@rajio-app/core-wasm/node";
 import type { EpisodeSummary, PodcastSummary } from "../shared/types";
 import { APP_VERSION } from "../shared/version";
-interface ParsedFeed {
+export interface ParsedFeed {
   episodes: EpisodeSummary[];
   podcast: PodcastSummary;
 }
@@ -20,18 +20,34 @@ const feedRequestHeaders = {
 
 export class RssService {
   async fetchFeed(feedUrl: string): Promise<ParsedFeed> {
+    const result = await this.fetchConditional(feedUrl, {});
+    if (!result.feed) throw new Error("Unexpected empty feed response");
+    return result.feed;
+  }
+
+  async fetchConditional(
+    feedUrl: string,
+    validators: { etag?: string; modified?: string },
+  ): Promise<{ feed?: ParsedFeed; etag?: string; modified?: string }> {
     const normalizedFeedUrl = new URL(feedUrl).toString();
     const response = await fetch(normalizedFeedUrl, {
-      headers: feedRequestHeaders,
+      headers: {
+        ...feedRequestHeaders,
+        ...(validators.etag ? { "If-None-Match": validators.etag } : {}),
+        ...(validators.modified ? { "If-Modified-Since": validators.modified } : {}),
+      },
       signal: AbortSignal.timeout(30_000),
     });
-
+    const http = {
+      etag: response.headers.get("etag") ?? validators.etag,
+      modified: response.headers.get("last-modified") ?? validators.modified,
+    };
+    if (response.status === 304) return http;
     if (!response.ok) {
       const statusText = response.statusText ? ` ${response.statusText}` : "";
       throw new Error(`Feed request failed with HTTP ${response.status}${statusText}`);
     }
-
-    return this.parseFeed(normalizedFeedUrl, await response.text());
+    return { ...http, feed: this.parseFeed(normalizedFeedUrl, await response.text()) };
   }
 
   parseFeed(feedUrl: string, xml: string): ParsedFeed {

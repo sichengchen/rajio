@@ -133,3 +133,23 @@ test("rejects empty fetched feed bodies", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("conditional feed requests send validators and accept unchanged content", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const headers = new Headers(init?.headers);
+    assert.equal(headers.get("if-none-match"), '"v1"');
+    assert.equal(headers.get("if-modified-since"), "Tue, 08 Sep 2026 00:00:00 GMT");
+    return new Response(null, { status: 304 });
+  };
+  try {
+    const result = await new RssService().fetchConditional("https://example.com/feed", {
+      etag: '"v1"',
+      modified: "Tue, 08 Sep 2026 00:00:00 GMT",
+    });
+    assert.equal(result.feed, undefined);
+    assert.equal(result.etag, '"v1"');
+  } finally {
+    globalThis.fetch = original;
+  }
+});

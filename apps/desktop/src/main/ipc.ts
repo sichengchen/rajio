@@ -6,14 +6,25 @@ import type { LocalDatabase } from "./db";
 import { LibraryService } from "./library";
 import { PlaybackService } from "./playback";
 import { SettingsService } from "./settings";
+import { RefreshScheduler } from "./refresh";
 import { SyncService } from "./sync";
 
-export function registerIpcHandlers(db: LocalDatabase, defaultDownloadDirectory: string): void {
+export function registerIpcHandlers(
+  db: LocalDatabase,
+  defaultDownloadDirectory: string,
+): RefreshScheduler {
   const settings = new SettingsService(db, defaultDownloadDirectory);
   const downloads = new DownloadService(db, () => settings.getDownloadDirectory());
   const library = new LibraryService(db);
   const playback = new PlaybackService(db);
   const sync = new SyncService(db);
+  const refresh = new RefreshScheduler(library, (state) => {
+    if (!state.running)
+      for (const window of BrowserWindow.getAllWindows())
+        window.webContents.send(ipcChannels.library.changed);
+  });
+  ipcMain.handle(ipcChannels.library.refreshAll, () => refresh.run(true));
+  ipcMain.handle(ipcChannels.library.refreshState, () => refresh.state);
 
   ipcMain.handle(ipcChannels.library.list, () => library.listPodcasts());
   ipcMain.handle(ipcChannels.library.subscribe, (_event, feedUrl: string) =>
@@ -75,4 +86,5 @@ export function registerIpcHandlers(db: LocalDatabase, defaultDownloadDirectory:
   ipcMain.handle(ipcChannels.settings.set, (_event, nextSettings) => settings.set(nextSettings));
 
   ipcMain.handle(ipcChannels.sync.now, () => sync.syncNow());
+  return refresh;
 }

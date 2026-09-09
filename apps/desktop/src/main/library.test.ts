@@ -395,3 +395,32 @@ test("feed reorder keeps episode IDs and merges older duplicate checkpoints", as
     db.close();
   }
 });
+
+test("conditional refresh persists scheduling and retry backoff across service recreation", async () => {
+  const db = createTestDatabase();
+  seedPodcast(db, "podcast_1", "Example Feed");
+  let calls = 0;
+  let fail = false;
+  const reader = {
+    ...feedReader(feed()),
+    fetchConditional: async () => {
+      calls++;
+      if (fail) throw new Error("Unavailable");
+      return { etag: '"v1"' };
+    },
+  };
+  try {
+    await new LibraryService(db, reader).refresh("podcast_1", false);
+    await new LibraryService(db, reader).refresh("podcast_1", false);
+    assert.equal(calls, 1);
+    assert.equal(db.getFeedHTTP("podcast_1")?.etag, '"v1"');
+    fail = true;
+    await assert.rejects(new LibraryService(db, reader).refresh("podcast_1", true), /Unavailable/);
+    await assert.rejects(new LibraryService(db, reader).refresh("podcast_1", false), /Unavailable/);
+    assert.equal(calls, 2);
+    assert.equal(db.getFeedHTTP("podcast_1")?.failures, 1);
+    assert.ok((db.getFeedHTTP("podcast_1")?.nextAttempt ?? 0) > Date.now());
+  } finally {
+    db.close();
+  }
+});

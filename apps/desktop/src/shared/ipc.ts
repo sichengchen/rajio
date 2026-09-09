@@ -25,12 +25,17 @@ export const ipcChannels = {
   },
   library: {
     list: "library:list",
+    refreshAll: "library:refresh-all",
+    refreshState: "library:refresh-state",
+    changed: "library:changed",
     refresh: "library:refresh",
     subscribe: "library:subscribe",
     unsubscribe: "library:unsubscribe",
   },
   playback: {
     getSource: "playback:get-source",
+    checkpointRequested: "playback:checkpoint-requested",
+    checkpointReady: "playback:checkpoint-ready",
     listProgress: "playback:list-progress",
     saveProgress: "playback:save-progress",
   },
@@ -46,6 +51,9 @@ export const ipcChannels = {
 
 export interface NewcastleApi {
   library: {
+    refreshAll?: () => Promise<void>;
+    refreshState?: () => Promise<{ running: boolean; checkedAt?: string; failures: string[] }>;
+    onChanged?: (callback: () => void) => () => void;
     list: () => Promise<PodcastSummary[]>;
     subscribe: (feedUrl: string) => Promise<PodcastSummary>;
     unsubscribe: (podcastId: string) => Promise<void>;
@@ -63,6 +71,7 @@ export interface NewcastleApi {
     delete: (episodeId: string) => Promise<void>;
   };
   playback: {
+    onCheckpointRequested?: (callback: () => Promise<void>) => () => void;
     getSource: (episodeId: string) => Promise<PlaybackSource>;
     listProgress: () => Promise<PlaybackProgressSummary[]>;
     saveProgress: (progress: PlaybackProgressInput) => Promise<void>;

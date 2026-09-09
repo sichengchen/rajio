@@ -65,13 +65,7 @@ interface ProgressDialogState {
 }
 
 interface PodcastStore {
-  currentPage:
-    | "podcasts"
-    | "whats-new"
-    | "settings"
-    | "downloaded"
-    | "favorites"
-    | "library";
+  currentPage: "podcasts" | "whats-new" | "settings" | "downloaded" | "favorites" | "library";
   downloadedEpisodes: Episode[];
   downloadProgress: Map<string, DownloadProgress>;
   episodeCache: Map<string, Episode[]>;
@@ -116,7 +110,7 @@ interface PodcastStore {
   getLatestEpisodes: () => Promise<Episode[]>;
   getUnfinishedEpisodes: () => Promise<Episode[]>;
   importFromOPML: (opmlContent: string) => Promise<{ errors: number; imported: number }>;
-  initializeStore: () => Promise<void>;
+  initializeStore: (background?: boolean) => Promise<void>;
   loadEpisodes: (podcastId: string) => Promise<void>;
   loadMoreEpisodes: (podcastId: string) => Promise<void>;
   loadMoreLatestEpisodes: () => Promise<Episode[]>;
@@ -144,13 +138,7 @@ interface PodcastStore {
   seekToTime: (time: number) => void;
   setAutoPlay: (autoPlay: boolean) => void;
   setCurrentPage: (
-    page:
-      | "podcasts"
-      | "whats-new"
-      | "settings"
-      | "downloaded"
-      | "favorites"
-      | "library",
+    page: "podcasts" | "whats-new" | "settings" | "downloaded" | "favorites" | "library",
   ) => void;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
@@ -464,8 +452,8 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
     }
   },
 
-  initializeStore: async () => {
-    set({ isLoading: true });
+  initializeStore: async (background = false) => {
+    if (!background) set({ isLoading: true });
     try {
       await Promise.all([favoriteEpisodesPersistence, playbackQueuePersistence]);
       const [podcastSummaries, settings, progressSummaries] = await Promise.all([
@@ -724,9 +712,8 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
   refreshAllPodcasts: async () => {
     set({ isRefreshing: true });
     try {
-      for (const podcast of get().podcasts) {
-        await desktopApi.library.refresh(podcast.id);
-      }
+      if (desktopApi.library.refreshAll) await desktopApi.library.refreshAll();
+      else for (const podcast of get().podcasts) await desktopApi.library.refresh(podcast.id);
       await get().initializeStore();
       get().clearLatestEpisodesCache();
     } finally {

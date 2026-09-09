@@ -21,6 +21,30 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { desktopApi } from "@/desktop-api";
 
 export function SettingsPage() {
+  const [refreshState, setRefreshState] = useState<{
+    running: boolean;
+    checkedAt?: string;
+    failures: string[];
+  }>({ running: false, failures: [] });
+  useEffect(() => {
+    const load = () => {
+      void desktopApi.library.refreshState?.().then(setRefreshState);
+    };
+    load();
+    return desktopApi.library.onChanged?.(load);
+  }, []);
+  const refreshFeeds = async () => {
+    setRefreshState((state) => ({ ...state, running: true }));
+    try {
+      await usePodcastStore.getState().refreshAllPodcasts();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Refresh failed");
+    } finally {
+      const state = await desktopApi.library.refreshState?.();
+      if (state) setRefreshState(state);
+      else setRefreshState((state) => ({ ...state, running: false }));
+    }
+  };
   const [isClearingData, setIsClearingData] = useState(false);
   const [isClearingDownloads, setIsClearingDownloads] = useState(false);
   const [isChoosingDownloadDirectory, setIsChoosingDownloadDirectory] = useState(false);
@@ -150,6 +174,24 @@ export function SettingsPage() {
           />
         </SettingsGroup>
 
+        <SettingsGroup title="Subscriptions">
+          <SettingsAction
+            label="Refresh podcasts"
+            description={
+              refreshState.checkedAt
+                ? `Last checked: ${new Date(refreshState.checkedAt).toLocaleString()}`
+                : "Podcasts refresh automatically when Rajio opens and resumes."
+            }
+            actionLabel={refreshState.running ? "Refreshing…" : "Refresh now"}
+            onAction={refreshFeeds}
+            disabled={refreshState.running}
+          />
+          {refreshState.failures.map((failure) => (
+            <p key={failure} className="text-sm text-destructive">
+              {failure}
+            </p>
+          ))}
+        </SettingsGroup>
         {/* Playback Settings */}
         <SettingsGroup title="Playback">
           <SettingsSelect

@@ -16,12 +16,28 @@ const api: NewcastleApi = {
     search: (request) => ipcRenderer.invoke(ipcChannels.episodes.search, request),
   },
   library: {
+    refreshAll: () => ipcRenderer.invoke(ipcChannels.library.refreshAll),
+    refreshState: () => ipcRenderer.invoke(ipcChannels.library.refreshState),
+    onChanged: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on(ipcChannels.library.changed, listener);
+      return () => ipcRenderer.removeListener(ipcChannels.library.changed, listener);
+    },
     list: () => ipcRenderer.invoke(ipcChannels.library.list),
     refresh: (podcastId) => ipcRenderer.invoke(ipcChannels.library.refresh, podcastId),
     subscribe: (feedUrl) => ipcRenderer.invoke(ipcChannels.library.subscribe, feedUrl),
     unsubscribe: (podcastId) => ipcRenderer.invoke(ipcChannels.library.unsubscribe, podcastId),
   },
   playback: {
+    onCheckpointRequested: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, token: string) => {
+        void callback()
+          .catch((error) => console.error("Final playback checkpoint failed", error))
+          .finally(() => ipcRenderer.send(ipcChannels.playback.checkpointReady, token));
+      };
+      ipcRenderer.on(ipcChannels.playback.checkpointRequested, listener);
+      return () => ipcRenderer.removeListener(ipcChannels.playback.checkpointRequested, listener);
+    },
     getSource: (episodeId) => ipcRenderer.invoke(ipcChannels.playback.getSource, episodeId),
     listProgress: () => ipcRenderer.invoke(ipcChannels.playback.listProgress),
     saveProgress: (progress) => ipcRenderer.invoke(ipcChannels.playback.saveProgress, progress),

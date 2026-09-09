@@ -23,7 +23,17 @@ export interface SyncOutboxEntry {
   updatedAt: string;
 }
 
+export interface FeedHTTPState {
+  etag?: string;
+  modified?: string;
+  checkedAt: number;
+  nextAttempt: number;
+  failures: number;
+  error?: string;
+}
+
 export const localDatabaseSchema = [
+  `CREATE TABLE IF NOT EXISTS feed_http (podcast_id TEXT PRIMARY KEY REFERENCES podcasts(id) ON DELETE CASCADE, record TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS podcasts (
     id TEXT PRIMARY KEY,
     feed_url TEXT NOT NULL UNIQUE,
@@ -96,6 +106,20 @@ export class LocalDatabase {
     for (const statement of localDatabaseSchema) {
       this.db.exec(statement);
     }
+  }
+
+  getFeedHTTP(podcastId: string): FeedHTTPState | undefined {
+    const row = this.db
+      .prepare("SELECT record FROM feed_http WHERE podcast_id=?")
+      .get(podcastId) as { record: string } | undefined;
+    return row ? JSON.parse(row.record) : undefined;
+  }
+  saveFeedHTTP(podcastId: string, state: FeedHTTPState): void {
+    this.db
+      .prepare(
+        "INSERT INTO feed_http VALUES (?, ?) ON CONFLICT(podcast_id) DO UPDATE SET record=excluded.record",
+      )
+      .run(podcastId, JSON.stringify(state));
   }
 
   transaction<T>(operation: () => T): T {

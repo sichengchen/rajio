@@ -2,16 +2,7 @@
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Plus,
-  Radio,
-  Search,
-  RefreshCw,
-  Settings,
-  Sparkles,
-  Download,
-  Heart,
-} from "lucide-react";
+import { Plus, Radio, Search, Settings, Sparkles, Download, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CoverImage } from "@/components/ui/cover-image";
@@ -63,7 +54,6 @@ export function PodcastSidebar() {
   const currentPage = usePodcastStore((state) => state.currentPage);
   const isLoading = usePodcastStore((state) => state.isLoading);
   const isRefreshing = usePodcastStore((state) => state.isRefreshing);
-  const refreshAllPodcasts = usePodcastStore((state) => state.refreshAllPodcasts);
   const refreshPodcast = usePodcastStore((state) => state.refreshPodcast);
   const setSelectedPodcast = usePodcastStore((state) => state.setSelectedPodcast);
   const setShowAddPodcastDialog = usePodcastStore((state) => state.setShowAddPodcastDialog);
@@ -75,15 +65,6 @@ export function PodcastSidebar() {
   const activePodcastId = location.pathname.startsWith("/podcast/")
     ? decodeURIComponent(location.pathname.replace("/podcast/", ""))
     : null;
-
-  const handleRefreshAll = async () => {
-    try {
-      await refreshAllPodcasts();
-      toast.success("Podcasts refreshed successfully!");
-    } catch {
-      toast.error("Failed to refresh podcasts");
-    }
-  };
 
   const handleRefreshPodcast = async (podcast: Podcast) => {
     try {
@@ -180,16 +161,6 @@ export function PodcastSidebar() {
                   <span className="truncate">Podcasts ({podcasts.length})</span>
                 </div>
                 <div className="-mr-2.5 flex flex-shrink-0 gap-1">
-                  <Button
-                    onClick={handleRefreshAll}
-                    size="sm"
-                    variant="ghost"
-                    disabled={isRefreshing}
-                    className="flex-shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                  >
-                    <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
-                    <span className="sr-only">Refresh podcasts</span>
-                  </Button>
                   <Button
                     onClick={() => setShowAddPodcastDialog(true)}
                     size="sm"

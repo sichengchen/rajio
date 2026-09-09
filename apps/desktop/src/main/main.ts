@@ -1,4 +1,16 @@
-import { app, BrowserWindow, dialog, nativeImage, protocol, shell } from "electron";
+import { ipcChannels } from "../shared/ipc";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  nativeImage,
+  powerMonitor,
+  Tray,
+  Menu,
+  protocol,
+  shell,
+  ipcMain,
+} from "electron";
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +32,30 @@ const appIconPath = app.isPackaged
 const appIcon = nativeImage.createFromPath(appIconPath);
 const startupEpisodeArtworkLimit = 24;
 const startupArtworkWaitMs = 3_000;
+let tray: Tray | undefined;
+let quitting = false;
+app.on("before-quit", (event) => {
+  if (quitting || startupSmokePath) return;
+  quitting = true;
+  event.preventDefault();
+  const window = BrowserWindow.getAllWindows()[0];
+  if (!window || window.webContents.isDestroyed()) {
+    app.quit();
+    return;
+  }
+  const token = crypto.randomUUID();
+  const finish = () => {
+    clearTimeout(timeout);
+    ipcMain.removeListener(ipcChannels.playback.checkpointReady, ready);
+    app.quit();
+  };
+  const ready = (event: Electron.IpcMainEvent, received: string) => {
+    if (event.sender.id === window.webContents.id && received === token) finish();
+  };
+  const timeout = setTimeout(finish, 2000);
+  ipcMain.on(ipcChannels.playback.checkpointReady, ready);
+  window.webContents.send(ipcChannels.playback.checkpointRequested, token);
+});
 const startupSmokePath = process.env.RAJIO_STARTUP_SMOKE_PATH;
 
 protocol.registerSchemesAsPrivileged([
@@ -49,6 +85,7 @@ function createMainWindow(artworkReady: Promise<unknown> = Promise.resolve()): B
         }
       : {}),
     webPreferences: {
+      backgroundThrottling: false,
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(mainDir, "../preload/index.cjs"),
@@ -57,6 +94,12 @@ function createMainWindow(artworkReady: Promise<unknown> = Promise.resolve()): B
     width: 1280,
   });
 
+  window.on("close", (event) => {
+    if (!quitting) {
+      event.preventDefault();
+      window.hide();
+    }
+  });
   registerExternalNavigation(window.webContents, (url) => shell.openExternal(url));
 
   window.once("ready-to-show", () => {
@@ -87,7 +130,16 @@ app.setName("Rajio");
 if (existsSync(legacyUserDataPath)) {
   app.setPath("userData", legacyUserDataPath);
 }
+if (process.env.RAJIO_USER_DATA_DIR) app.setPath("userData", process.env.RAJIO_USER_DATA_DIR);
 app.setAppUserModelId(appId);
+if (!app.requestSingleInstanceLock()) app.quit();
+app.on("second-instance", () => {
+  const window = BrowserWindow.getAllWindows()[0];
+  if (window) {
+    window.show();
+    window.focus();
+  }
+});
 
 void app
   .whenReady()
@@ -117,17 +169,49 @@ void app
       app.getPath("appData"),
       app.getPath("downloads"),
     );
-    registerIpcHandlers(db, defaultDownloadDirectory);
-    createMainWindow(startupArtworkReady);
-
-    app.on("before-quit", () => {
+    const refresh = registerIpcHandlers(db, defaultDownloadDirectory);
+    const mainWindow = createMainWindow(startupArtworkReady);
+    if (process.platform !== "darwin") {
+      tray = new Tray(appIcon);
+      tray.setToolTip("Rajio");
+      tray.setContextMenu(
+        Menu.buildFromTemplate([
+          {
+            label: "Open Rajio",
+            click: () => {
+              mainWindow.show();
+              mainWindow.focus();
+            },
+          },
+          { role: "quit", label: "Quit Rajio" },
+        ]),
+      );
+      tray.on("click", () => {
+        mainWindow.show();
+        mainWindow.focus();
+      });
+    }
+    const refreshLibrary = () => {
+      void refresh.run().catch((error) => console.error("Refresh failed", error));
+    };
+    const refreshTimer = setInterval(refreshLibrary, 15 * 60_000);
+    refreshTimer.unref();
+    powerMonitor.on("resume", refreshLibrary);
+    if (!startupSmokePath) refreshLibrary();
+    app.on("will-quit", () => {
+      clearInterval(refreshTimer);
       db.close();
     });
 
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
+      const window = BrowserWindow.getAllWindows()[0];
+      if (window) {
+        window.show();
+        window.focus();
+      } else {
         createMainWindow();
       }
+      refreshLibrary();
     });
   })
   .catch((error: unknown) => {
