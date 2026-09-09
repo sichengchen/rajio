@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
           task.setTaskCompleted(success: false)
           return
         }
+        guard L10n.defaults.object(forKey: "automaticRefresh") as? Bool != false else {
+          task.setTaskCompleted(success: true)
+          return
+        }
         self.scheduleRefresh()
         let refresh = Task { await FeedClient(database: database).refreshAll() }
         task.expirationHandler = { refresh.cancel() }
@@ -37,6 +41,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
   }
 
   func scheduleRefresh() {
+    guard L10n.defaults.object(forKey: "automaticRefresh") as? Bool != false else {
+      BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: "com.scchan.rajio.refresh")
+      return
+    }
     let request = BGAppRefreshTaskRequest(identifier: "com.scchan.rajio.refresh")
     request.earliestBeginDate = Date().addingTimeInterval(3600)
     do { try BGTaskScheduler.shared.submit(request) } catch

@@ -27,7 +27,7 @@ final class LibraryModel: ObservableObject {
       episodes = try await database.allEpisodes()
       favorites = try await database.collection("favorites")
       queue = try await database.collection("queue")
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func subscribe(_ input: String) async -> Bool {
@@ -40,13 +40,14 @@ final class LibraryModel: ObservableObject {
       await reload()
       return true
     } catch {
-      if !Task.isCancelled { self.error = error.localizedDescription }
+      if !Task.isCancelled { self.error = L10n.error(error) }
       return false
     }
   }
 
   func refresh(force: Bool = false) async {
     guard !isRefreshing else { return }
+    if !force && L10n.defaults.object(forKey: "automaticRefresh") as? Bool == false { return }
     isRefreshing = true
     defer { isRefreshing = false }
     refreshFailures = await feeds.refreshAll(force: force)
@@ -57,7 +58,7 @@ final class LibraryModel: ObservableObject {
     do {
       try await database.unsubscribe(podcastId: podcast.id, at: Date().ISO8601Format())
       await reload()
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func setCollection(_ name: String, episode: Episode, included: Bool, index: Int? = nil) async {
@@ -65,12 +66,12 @@ final class LibraryModel: ObservableObject {
       try await database.updateCollection(
         name, episodeId: episode.id, included: included, index: index, at: Date().ISO8601Format())
       await reload()
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func importOPML(_ data: Data) async {
     guard let xml = String(data: data, encoding: .utf8) else {
-      error = String(localized: "Unable to read OPML.")
+      error = L10n.text("Unable to read OPML.")
       return
     }
     do {
@@ -79,12 +80,12 @@ final class LibraryModel: ObservableObject {
       for url in urls {
         try Task.checkCancellation()
         do { try await feeds.fetch(url, force: true) } catch {
-          failures.append("\(url): \(error.localizedDescription)")
+          failures.append("\(url): \(L10n.error(error))")
         }
       }
       await reload()
       if !failures.isEmpty { error = failures.joined(separator: "\n") }
-    } catch { if !Task.isCancelled { self.error = error.localizedDescription } }
+    } catch { if !Task.isCancelled { self.error = L10n.error(error) } }
   }
 
   func exportOPML() -> String {

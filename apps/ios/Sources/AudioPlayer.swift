@@ -124,7 +124,7 @@ final class AudioPlayer: ObservableObject {
         Task { @MainActor in
           guard let self, self.player.currentItem === item else { return }
           self.pause()
-          self.error = String(localized: "Playback failed. Try again.")
+          self.error = L10n.text("Playback failed. Try again.")
         }
       })
     notifications.append(
@@ -137,7 +137,7 @@ final class AudioPlayer: ObservableObject {
           await self.checkpoint()
           self.logger.notice("Item reached end")
           self.pause()
-          await self.playNext()
+          if L10n.defaults.object(forKey: "autoPlay") as? Bool != false { await self.playNext() }
         }
       })
   }
@@ -159,7 +159,7 @@ final class AudioPlayer: ObservableObject {
         duration = saved?.duration ?? selected.duration ?? 0
         updateNowPlaying()
       }
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func play(_ next: Episode) async {
@@ -168,6 +168,21 @@ final class AudioPlayer: ObservableObject {
       return
     }
     await prepare(next, autoplay: true)
+  }
+
+  func stop(podcastId: String) async {
+    guard episode?.podcastId == podcastId else { return }
+    pause()
+    requestID = UUID()
+    await checkpoint()
+    itemObserver = nil
+    player.replaceCurrentItem(with: nil)
+    episode = nil
+    position = 0
+    duration = 0
+    isLoading = false
+    isSeeking = false
+    MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
   }
 
   private func prepare(_ next: Episode, autoplay: Bool) async {
@@ -193,7 +208,7 @@ final class AudioPlayer: ObservableObject {
           download.status = "missing"
           download.fileName = nil
           download.bytes = 0
-          download.error = String(localized: "Downloaded file is missing. Download it again.")
+          download.error = L10n.text("Downloaded file is missing. Download it again.")
           try await database.saveDownload(download)
         }
       }
@@ -221,7 +236,7 @@ final class AudioPlayer: ObservableObject {
             self.logger.error("Media failed: \(String(describing: item.error))")
             self.isSeeking = false
             self.pause()
-            self.error = String(localized: "Playback failed. Try again.")
+            self.error = L10n.text("Playback failed. Try again.")
           case .readyToPlay:
             self.itemObserver = nil
             if startPosition > 0 {
@@ -244,7 +259,7 @@ final class AudioPlayer: ObservableObject {
       isLoading = false
       wantsPlayback = false
       isPlaying = false
-      self.error = error.localizedDescription
+      self.error = L10n.error(error)
     }
   }
 
@@ -268,7 +283,7 @@ final class AudioPlayer: ObservableObject {
     } catch {
       wantsPlayback = false
       isPlaying = false
-      self.error = error.localizedDescription
+      self.error = L10n.error(error)
     }
   }
 
@@ -325,7 +340,7 @@ final class AudioPlayer: ObservableObject {
     do {
       try await database.saveProgress(
         episodeId: id, position: time, duration: duration, at: Date().ISO8601Format())
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func checkpoint() async { await persist(checkpointSnapshot()) }
@@ -346,7 +361,7 @@ final class AudioPlayer: ObservableObject {
       try await database.updateCollection(
         "queue", episodeId: id, included: false, at: Date().ISO8601Format())
       await prepare(next, autoplay: true)
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   private func updateNowPlaying() {

@@ -13,6 +13,8 @@ struct ShowView: View {
           Artwork(url: podcast.imageUrl, size: 88)
           VStack(alignment: .leading, spacing: 8) {
             if let author = podcast.author { Text(author).font(.headline) }
+            Text(L10n.episodeCount(model.episodes.filter { $0.podcastId == podcast.id }.count))
+              .font(.caption).foregroundStyle(.secondary)
             Text(podcast.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(5)
           }
         }
@@ -28,7 +30,7 @@ struct ShowView: View {
       do {
         try await model.feeds.fetch(podcast.feedUrl, existing: podcast, force: true)
         await model.reload()
-      } catch { model.error = error.localizedDescription }
+      } catch { model.error = L10n.error(error) }
     }
   }
 }
@@ -48,7 +50,7 @@ struct EpisodeRow: View {
           if let published = episode.publishedAt,
             let date = try? Date(published, strategy: .iso8601)
           {
-            Text(date, style: .date)
+            Text(date.formatted(.dateTime.year().month(.abbreviated).day().locale(L10n.locale)))
           }
           if let duration = episode.duration {
             Text(
@@ -76,7 +78,8 @@ struct EpisodeRow: View {
         Task { await model.setCollection("queue", episode: episode, included: true, index: 0) }
       }
       Button(
-        model.favorites.contains(episode.id) ? "Remove Favorite" : "Favorite", systemImage: "heart"
+        LocalizedStringKey(model.favorites.contains(episode.id) ? "Remove Favorite" : "Favorite"),
+        systemImage: "heart"
       ) {
         Task {
           await model.setCollection(
@@ -89,6 +92,7 @@ struct EpisodeRow: View {
 }
 
 struct EpisodeDetailView: View {
+  @Environment(\.dynamicTypeSize) private var textSize
   @EnvironmentObject private var downloads: DownloadManager
   let episode: Episode
   @ObservedObject var model: LibraryModel
@@ -100,7 +104,10 @@ struct EpisodeDetailView: View {
           Artwork(url: episode.imageUrl, size: 72)
           Text(episode.title).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
         }
-        HStack {
+        let actions =
+          textSize.isAccessibilitySize
+          ? AnyLayout(VStackLayout(alignment: .leading)) : AnyLayout(HStackLayout())
+        actions {
           Button("Play", systemImage: "play.fill") { Task { await audio.play(episode) } }
             .buttonStyle(.borderedProminent)
           Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
@@ -115,7 +122,7 @@ struct EpisodeDetailView: View {
           } label: {
             Label(
               model.favorites.contains(episode.id)
-                ? String(localized: "Remove Favorite") : String(localized: "Favorite"),
+                ? L10n.text("Remove Favorite") : L10n.text("Favorite"),
               systemImage: model.favorites.contains(episode.id) ? "heart.fill" : "heart")
           }.labelStyle(.iconOnly).padding(8)
         }
@@ -191,7 +198,9 @@ struct DownloadControl: View {
         }
       } else {
         Button(
-          record?.status == "failed" || record?.status == "missing" ? "Retry Download" : "Download",
+          LocalizedStringKey(
+            record?.status == "failed" || record?.status == "missing"
+              ? "Retry Download" : "Download"),
           systemImage: "arrow.down.circle"
         ) { Task { await downloads.download(episode) } }
       }

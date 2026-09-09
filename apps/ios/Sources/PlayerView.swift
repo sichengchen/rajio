@@ -42,7 +42,7 @@ struct PlayerView: View {
                 audio.isPlaying ? audio.pause() : audio.resume()
               } label: {
                 Label(
-                  audio.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
+                  audio.isPlaying ? L10n.text("Pause") : L10n.text("Play"),
                   systemImage: audio.isPlaying ? "pause.fill" : "play.fill")
               }.font(.largeTitle).accessibilityIdentifier("player-toggle")
               Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }
@@ -51,10 +51,12 @@ struct PlayerView: View {
             HStack {
               Menu {
                 ForEach([0.75, 1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { speed in
-                  Button(speed.formatted() + "×") { audio.setSpeed(speed) }
+                  Button(speed.formatted(.number.locale(L10n.locale)) + "×") {
+                    audio.setSpeed(speed)
+                  }
                 }
               } label: {
-                Text(audio.speed.formatted() + "×")
+                Text(audio.speed.formatted(.number.locale(L10n.locale)) + "×")
               }.accessibilityLabel("Playback speed")
               Spacer()
               RoutePicker().frame(width: 44, height: 44).accessibilityLabel("Audio output")

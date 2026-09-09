@@ -65,11 +65,11 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
           record.status = "missing"
           record.fileName = nil
           record.bytes = 0
-          record.error = String(localized: "Downloaded file is missing. Download it again.")
+          record.error = L10n.text("Downloaded file is missing. Download it again.")
           try await store(record)
         } else if record.status == "downloading", !active.contains(record.taskToken ?? "") {
           record.status = "failed"
-          record.error = String(localized: "Download interrupted. Try again.")
+          record.error = L10n.text("Download interrupted. Try again.")
           try await store(record)
         }
       }
@@ -105,7 +105,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         try? FileManager.default.removeItem(at: file)
       }
     } catch {
-      self.error = error.localizedDescription
+      self.error = L10n.error(error)
       ready = false
     }
   }
@@ -129,7 +129,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       let task = session.downloadTask(with: url)
       task.taskDescription = record.taskToken
       task.resume()
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func cancel(_ episodeId: String) async {
@@ -141,7 +141,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       try await store(record)
       for task in await session.allTasks
       where task.taskDescription?.components(separatedBy: "|").first == episodeId { task.cancel() }
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   func remove(_ episodeId: String) async {
@@ -155,7 +155,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       }
       try await database.removeDownload(episodeId)
       records.removeValue(forKey: episodeId)
-    } catch { self.error = error.localizedDescription }
+    } catch { self.error = L10n.error(error) }
   }
 
   private func localURL(_ record: DownloadRecord) -> URL? {
@@ -248,7 +248,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
         try? FileManager.default.removeItem(at: target)
         if records[id]?.status == "downloading", records[id]?.taskToken == token {
           try? await store(
-            DownloadRecord(episodeId: id, status: "failed", error: error.localizedDescription))
+            DownloadRecord(episodeId: id, status: "failed", error: L10n.error(error)))
         }
       }
     }
@@ -265,7 +265,7 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
       defer { writes.leave() }
       if records[id]?.status == "downloading", records[id]?.taskToken == token {
         try? await store(
-          DownloadRecord(episodeId: id, status: "failed", error: error.localizedDescription))
+          DownloadRecord(episodeId: id, status: "failed", error: L10n.error(error)))
       }
     }
   }
@@ -283,8 +283,6 @@ final class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDeleg
 enum DownloadError: LocalizedError {
   case storageLimit
   var errorDescription: String? {
-    String(
-      localized:
-        "Download storage limit reached. Remove downloads or increase the limit in Settings.")
+    L10n.text("Download storage limit reached. Remove downloads or increase the limit in Settings.")
   }
 }

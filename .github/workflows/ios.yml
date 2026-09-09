@@ -26,6 +26,7 @@ jobs:
           node-version: 22
       - name: Verify offline listening in Simulator
         run: |
+          node scripts/check-ios-localization.mjs
           node scripts/ios-fixture-server.mjs > "$RUNNER_TEMP/rajio-fixtures.log" 2>&1 &
           fixture_pid=$!
           trap 'kill "$fixture_pid"' EXIT

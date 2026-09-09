@@ -7,6 +7,7 @@ struct LibraryView: View {
   @StateObject private var model: LibraryModel
   @ObservedObject private var downloads: DownloadManager
   @StateObject private var audio: AudioPlayer
+  @State private var settings = false
   @State private var adding = false
   @State private var importing = false
   @State private var exporting = false
@@ -40,7 +41,7 @@ struct LibraryView: View {
               Text("Favorites").tag("favorites")
               Text("Queue").tag("queue")
               Text("Downloads").tag("downloads")
-            }.pickerStyle(.segmented)
+            }.pickerStyle(.menu)
           }
           if section == "all" {
             ForEach(
@@ -62,7 +63,15 @@ struct LibraryView: View {
                 }.padding(.vertical, 3)
               }
               .swipeActions {
-                Button("Unsubscribe", role: .destructive) { Task { await model.remove(podcast) } }
+                Button("Unsubscribe", role: .destructive) {
+                  Task {
+                    await audio.stop(podcastId: podcast.id)
+                    for episode in model.episodes where episode.podcastId == podcast.id {
+                      await downloads.remove(episode.id)
+                    }
+                    await model.remove(podcast)
+                  }
+                }
               }
             }
           } else {
@@ -125,6 +134,7 @@ struct LibraryView: View {
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
           Menu("Library actions", systemImage: "ellipsis.circle") {
+            Button("Settings", systemImage: "gearshape") { settings = true }
             Button("Import OPML", systemImage: "square.and.arrow.down") { importing = true }
             Button("Export OPML", systemImage: "square.and.arrow.up") { exporting = true }.disabled(
               model.podcasts.isEmpty)
@@ -139,6 +149,7 @@ struct LibraryView: View {
         ToolbarItem(placement: .topBarTrailing) { if section == "queue" { EditButton() } }
       }
       .refreshable { await model.refresh(force: true) }
+      .sheet(isPresented: $settings) { SettingsView(database: model.database, audio: audio) }
       .sheet(isPresented: $adding) { AddPodcastView(model: model) }
       .sheet(isPresented: $fullPlayer) { PlayerView(audio: audio, model: model) }
       .fileImporter(isPresented: $importing, allowedContentTypes: [.xml, .data]) { result in
@@ -148,14 +159,14 @@ struct LibraryView: View {
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             await model.importOPML(try Data(contentsOf: url))
-          } catch { model.error = error.localizedDescription }
+          } catch { model.error = L10n.error(error) }
         }
       }
       .fileExporter(
         isPresented: $exporting, document: OPMLDocument(text: model.exportOPML()),
         contentType: .xml, defaultFilename: "Rajio.opml"
       ) { result in
-        if case .failure(let error) = result { model.error = error.localizedDescription }
+        if case .failure(let error) = result { model.error = L10n.error(error) }
       }
       .task {
         await downloads.restore()
@@ -191,7 +202,7 @@ struct LibraryView: View {
             audio.isPlaying ? audio.pause() : audio.resume()
           } label: {
             Label(
-              audio.isPlaying ? String(localized: "Pause") : String(localized: "Play"),
+              audio.isPlaying ? L10n.text("Pause") : L10n.text("Play"),
               systemImage: audio.isPlaying ? "pause.fill" : "play.fill")
           }.labelStyle(.iconOnly).font(.title2).padding(8)
           Button("Forward 30 seconds", systemImage: "goforward.30") { audio.seek(by: 30) }

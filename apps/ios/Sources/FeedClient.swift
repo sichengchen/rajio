@@ -68,7 +68,7 @@ actor FeedClient {
             _ = try await self.fetch(podcast.feedUrl, existing: podcast, force: force)
             return nil
           } catch {
-            return Task.isCancelled ? nil : "\(podcast.title): \(error.localizedDescription)"
+            return Task.isCancelled ? nil : "\(podcast.title): \(L10n.error(error))"
           }
         }
       }
@@ -95,8 +95,10 @@ enum FeedError: LocalizedError {
   case http(Int)
   var errorDescription: String? {
     switch self {
-    case .invalidURL: String(localized: "Enter a valid feed URL.")
-    case .http(let code): String(localized: "Feed request failed (HTTP \(code)).")
+    case .invalidURL: L10n.text("Enter a valid feed URL.")
+    case .http(let code):
+      String(
+        format: L10n.text("Feed request failed (HTTP %lld)."), locale: L10n.locale, Int64(code))
     }
   }
 }

@@ -19,7 +19,7 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     GENERATE_INFOPLIST_FILE: YES
     'LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]': '$(inherited) $(SRCROOT)/../../target/ios-simulator'
-    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]': '$(inherited) $(SRCROOT)/../../target/aarch64-apple-ios/release'
+    'LIBRARY_SEARCH_PATHS[sdk=iphoneos*]': '$(inherited) $(SRCROOT)/../../target/ios-device-core'
     OTHER_LDFLAGS: '$(inherited) -lrajio_core'
 targets:
   Rajio:
@@ -43,7 +43,7 @@ targets:
           - $(SRCROOT)/../../scripts/build-core-ios.sh
         outputFiles:
           - $(SRCROOT)/../../target/ios-simulator/librajio_core.a
-          - $(SRCROOT)/../../target/aarch64-apple-ios/release/librajio_core.a
+          - $(SRCROOT)/../../target/ios-device-core/librajio_core.a
     dependencies:
       - package: RajioLibrary
       - package: RajioCore

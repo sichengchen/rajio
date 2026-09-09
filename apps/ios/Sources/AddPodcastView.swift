@@ -96,7 +96,7 @@ struct AddPodcastView: View {
         }
         struct Response: Decodable { let results: [CatalogPodcast] }
         results = try JSONDecoder().decode(Response.self, from: data).results
-      } catch { if !Task.isCancelled { model.error = error.localizedDescription } }
+      } catch { if !Task.isCancelled { model.error = L10n.error(error) } }
     }
   }
 }
