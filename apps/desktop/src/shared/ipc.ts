@@ -21,6 +21,7 @@ export const ipcChannels = {
   },
   episodes: {
     listAll: "episodes:list-all",
+    byIds: "episodes:by-ids",
     listLatest: "episodes:list-latest",
     listByPodcast: "episodes:list-by-podcast",
     listByPodcastPage: "episodes:list-by-podcast-page",
@@ -65,6 +66,7 @@ export interface NewcastleApi {
   };
   episodes: {
     listAll: () => Promise<EpisodeSummary[]>;
+    byIds?: (ids: string[]) => Promise<EpisodeSummary[]>;
     listLatest: (request?: EpisodePageRequest) => Promise<EpisodePage>;
     listByPodcast: (podcastId: string) => Promise<EpisodeSummary[]>;
     listByPodcastPage: (podcastId: string, request?: EpisodePageRequest) => Promise<EpisodePage>;

@@ -467,7 +467,10 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
         desktopApi.playback.listProgress(),
       ]);
       setLanguage(settings.language, navigator.language);
-      document.documentElement.lang = settings.language === "system" || !settings.language ? navigator.language : settings.language;
+      document.documentElement.lang =
+        settings.language === "system" || !settings.language
+          ? navigator.language
+          : settings.language;
       const podcasts = podcastSummaries.map(toPodcast);
       const favoriteEpisodeIds = parseFavoriteEpisodes(settings.favoriteEpisodes);
       const resumableEpisodeIds = progressSummaries
@@ -479,7 +482,13 @@ export const usePodcastStore = create<PodcastStore>((set, get) => ({
       );
       const libraryEpisodes =
         favoriteEpisodeIds.length > 0 || queueEpisodeIds.length > 0
-          ? await listLibraryEpisodes(podcasts)
+          ? desktopApi.episodes.byIds
+            ? (
+                await desktopApi.episodes.byIds([
+                  ...new Set([...favoriteEpisodeIds, ...queueEpisodeIds]),
+                ])
+              ).map(toEpisode)
+            : await listLibraryEpisodes(podcasts)
           : null;
       const episodesById = new Map(
         (libraryEpisodes ?? []).map((episode) => [episode.id, episode] as const),

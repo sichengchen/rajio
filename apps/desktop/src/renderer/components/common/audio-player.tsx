@@ -1,6 +1,6 @@
 import { t } from "../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { desktopApi } from "@/desktop-api";
 import { useOpenEpisode } from "@/hooks/use-open-episode";
@@ -568,7 +568,10 @@ export function AudioPlayer() {
           {/* Left side: Episode image */}
           <button
             onClick={handleCoverClick}
-            onContextMenu={event => { event.preventDefault(); desktopApi.controls?.showCoverMenu(); }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              desktopApi.controls?.showCoverMenu();
+            }}
             className="flex-shrink-0 rounded-lg transition-transform hover:scale-105"
             title={t("Open episode details")}
           >

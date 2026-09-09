@@ -162,15 +162,15 @@ export class LocalDatabase {
       .map((row) => String((row as Row).image_url));
   }
 
-  listEpisodeArtworkUrls(): string[] {
+  listEpisodeArtworkUrls(limit = 24): string[] {
     return this.db
       .prepare(
         `SELECT image_url
         FROM episodes
         WHERE image_url IS NOT NULL AND TRIM(image_url) <> ''
-        ORDER BY published_at DESC, id DESC`,
+        ORDER BY published_at DESC, id DESC LIMIT ?`,
       )
-      .all()
+      .all(limit)
       .map((row) => String((row as Row).image_url));
   }
 
@@ -457,6 +457,19 @@ export class LocalDatabase {
       .map(toEpisodeSummary);
 
     return toEpisodePage(rows, page, total);
+  }
+
+  listEpisodesByIds(ids: string[]): EpisodeSummary[] {
+    if (!Array.isArray(ids) || ids.length > 1000 || ids.some((id) => typeof id !== "string"))
+      throw new Error("Invalid episode selection");
+    const unique = [...new Set(ids)];
+    if (!unique.length) return [];
+    const rows = this.db
+      .prepare(`SELECT * FROM episodes WHERE id IN (${unique.map(() => "?").join(",")})`)
+      .all(...unique)
+      .map(toEpisodeSummary);
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    return unique.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
   }
 
   getEpisode(episodeId: string): EpisodeSummary | null {

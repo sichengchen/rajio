@@ -50,6 +50,7 @@ export function registerIpcHandlers(
   ipcMain.handle(ipcChannels.library.refresh, (_event, podcastId: string) =>
     library.refresh(podcastId),
   );
+  ipcMain.handle(ipcChannels.episodes.byIds, (_event, ids: string[]) => db.listEpisodesByIds(ids));
   ipcMain.handle(ipcChannels.episodes.listAll, () => library.listEpisodes());
   ipcMain.handle(ipcChannels.episodes.listLatest, (_event, request) =>
     library.listLatestEpisodes(request),

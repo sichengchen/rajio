@@ -11,14 +11,14 @@ function listen<T>(channel: string, callback: (value: T) => void) {
 const api: NewcastleApi = {
   controls: {
     showCoverMenu: () => ipcRenderer.send(c + ":cover-menu"),
-    get: () => ipcRenderer.invoke(c + ':get'),
-    publish: state => ipcRenderer.send(c + ':state', state),
-    command: command => ipcRenderer.send(c + ':command', command),
-    onState: callback => listen(c + ':state', callback),
-    onCommand: callback => listen(c + ':command', callback),
-    shortcuts: () => ipcRenderer.invoke(c + ':shortcuts'),
-    saveShortcuts: bindings => ipcRenderer.invoke(c + ':save-shortcuts', bindings),
-    onShortcuts: callback => listen(c + ':shortcuts', callback),
+    get: () => ipcRenderer.invoke(c + ":get"),
+    publish: (state) => ipcRenderer.send(c + ":state", state),
+    command: (command) => ipcRenderer.send(c + ":command", command),
+    onState: (callback) => listen(c + ":state", callback),
+    onCommand: (callback) => listen(c + ":command", callback),
+    shortcuts: () => ipcRenderer.invoke(c + ":shortcuts"),
+    saveShortcuts: (bindings) => ipcRenderer.invoke(c + ":save-shortcuts", bindings),
+    onShortcuts: (callback) => listen(c + ":shortcuts", callback),
   },
   downloads: {
     cancel: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.cancel, episodeId),
@@ -35,6 +35,7 @@ const api: NewcastleApi = {
     start: (episodeId) => ipcRenderer.invoke(ipcChannels.downloads.start, episodeId),
   },
   episodes: {
+    byIds: (ids) => ipcRenderer.invoke(ipcChannels.episodes.byIds, ids),
     listAll: () => ipcRenderer.invoke(ipcChannels.episodes.listAll),
     listLatest: (request) => ipcRenderer.invoke(ipcChannels.episodes.listLatest, request),
     listByPodcast: (podcastId) => ipcRenderer.invoke(ipcChannels.episodes.listByPodcast, podcastId),

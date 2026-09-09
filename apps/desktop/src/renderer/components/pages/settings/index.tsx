@@ -1,8 +1,9 @@
+import { useShallow } from "zustand/react/shallow";
 import { ShortcutSettings } from "../../common/shortcut-settings";
 import { languages, getLanguageChoice, setLanguage } from "../../../../shared/i18n";
 import { t, getLocale } from "../../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { useState, useEffect } from "react";
 import { AlertCircle, FolderOpen, Trash2 } from "lucide-react";
@@ -66,7 +67,19 @@ export function SettingsPage() {
     storageStats,
     refreshStorageStats,
     clearAllDownloads,
-  } = usePodcastStore();
+  } = usePodcastStore(
+    useShallow((state) => ({
+      preferences: state.preferences,
+      setSkipInterval: state.setSkipInterval,
+      setAutoPlay: state.setAutoPlay,
+      setItunesSearchEnabled: state.setItunesSearchEnabled,
+      clearAllData: state.clearAllData,
+      podcasts: state.podcasts,
+      storageStats: state.storageStats,
+      refreshStorageStats: state.refreshStorageStats,
+      clearAllDownloads: state.clearAllDownloads,
+    })),
+  );
 
   // Load storage stats on mount
   useEffect(() => {
@@ -168,18 +181,23 @@ export function SettingsPage() {
           <SettingsSelect
             label={t("Language")}
             value={language}
-            options={languages.map(item => ({ ...item, label: item.value === "system" ? t("Follow System") : item.label }))}
+            options={languages.map((item) => ({
+              ...item,
+              label: item.value === "system" ? t("Follow System") : item.label,
+            }))}
             onValueChange={(value) => {
-              void desktopApi.settings.set({ language: value }).then(() => {
-                setLanguage(value, navigator.language);
-                setLanguageChoice(getLanguageChoice());
-                document.documentElement.lang = value === "system" ? navigator.language : value;
-              }).catch(() => toast.error(t("Unable to change language")));
+              void desktopApi.settings
+                .set({ language: value })
+                .then(() => {
+                  setLanguage(value, navigator.language);
+                  setLanguageChoice(getLanguageChoice());
+                  document.documentElement.lang = value === "system" ? navigator.language : value;
+                })
+                .catch(() => toast.error(t("Unable to change language")));
             }}
           />
           <SettingsSelect
             label={t("Theme")}
-            
             value={theme || "system"}
             onValueChange={handleThemeChange}
             options={[
@@ -196,7 +214,9 @@ export function SettingsPage() {
             label={t("Refresh podcasts")}
             description={
               refreshState.checkedAt
-                ? t("Last checked: {date}", { date: new Date(refreshState.checkedAt).toLocaleString(getLocale()) })
+                ? t("Last checked: {date}", {
+                    date: new Date(refreshState.checkedAt).toLocaleString(getLocale()),
+                  })
                 : t("Podcasts refresh automatically when Rajio opens and resumes.")
             }
             actionLabel={refreshState.running ? "Refreshing…" : t("Refresh now")}
@@ -213,15 +233,49 @@ export function SettingsPage() {
         <SettingsGroup title={t("Playback")}>
           <SettingsSelect
             label={t("Skip Interval")}
-            
             value={(preferences.skipInterval || 30).toString()}
             onValueChange={handleSkipIntervalChange}
             options={[
-              { value: "5", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(5) },
-              { value: "10", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(10) },
-              { value: "15", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(15) },
-              { value: "30", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(30) },
-              { value: "60", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(60) },
+              {
+                value: "5",
+                label: new Intl.NumberFormat(getLocale(), {
+                  style: "unit",
+                  unit: "second",
+                  unitDisplay: "long",
+                }).format(5),
+              },
+              {
+                value: "10",
+                label: new Intl.NumberFormat(getLocale(), {
+                  style: "unit",
+                  unit: "second",
+                  unitDisplay: "long",
+                }).format(10),
+              },
+              {
+                value: "15",
+                label: new Intl.NumberFormat(getLocale(), {
+                  style: "unit",
+                  unit: "second",
+                  unitDisplay: "long",
+                }).format(15),
+              },
+              {
+                value: "30",
+                label: new Intl.NumberFormat(getLocale(), {
+                  style: "unit",
+                  unit: "second",
+                  unitDisplay: "long",
+                }).format(30),
+              },
+              {
+                value: "60",
+                label: new Intl.NumberFormat(getLocale(), {
+                  style: "unit",
+                  unit: "second",
+                  unitDisplay: "long",
+                }).format(60),
+              },
             ]}
             placeholder={t("Select interval")}
           />
@@ -301,7 +355,10 @@ export function SettingsPage() {
               loading={isClearingDownloads}
               confirmDialog={{
                 title: t("Clear All Downloads"),
-                description: t("Delete all downloads and free {size}? Subscriptions and playback progress will be kept.", { size: formatFileSize(storageStats?.totalSize || 0) }),
+                description: t(
+                  "Delete all downloads and free {size}? Subscriptions and playback progress will be kept.",
+                  { size: formatFileSize(storageStats?.totalSize || 0) },
+                ),
                 actionLabel: t("Clear Downloads"),
               }}
             />
@@ -330,14 +387,18 @@ export function SettingsPage() {
               loading={isClearingData}
               confirmDialog={{
                 title: t("Clear All Data"),
-                description: t("Permanently delete {count} subscriptions, downloads, playback history, and preferences? This cannot be undone.", { count: podcasts.length }),
+                description: t(
+                  "Permanently delete {count} subscriptions, downloads, playback history, and preferences? This cannot be undone.",
+                  { count: podcasts.length },
+                ),
                 actionLabel: t("Clear All Data"),
               }}
             />
           </SettingsDivider>
         </SettingsGroup>
 
-        <div className="text-xs text-muted-foreground text-center">{t("Version {version}", { version: APP_VERSION })} · Created by{" "}
+        <div className="text-xs text-muted-foreground text-center">
+          {t("Version {version}", { version: APP_VERSION })} · Created by{" "}
           <a
             href="https://www.scchan.com"
             target="_blank"

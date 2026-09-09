@@ -19,6 +19,7 @@ import { router } from "@/router";
 
 import "./app/globals.css";
 
+performance.mark("rajio:app-module");
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {

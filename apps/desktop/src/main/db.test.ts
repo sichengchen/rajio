@@ -176,3 +176,33 @@ function createTestDatabase(): LocalDatabase {
     path.join(mkdtempSync(path.join(tmpdir(), "newcastle-")), "test.sqlite"),
   );
 }
+
+test("selected episode hydration preserves requested order without returning the library", () => {
+  const db = createTestDatabase();
+  try {
+    db.upsertPodcast({
+      id: "selected-show",
+      title: "Show",
+      feedUrl: "https://example.com/selected.xml",
+    });
+    db.upsertEpisodes(
+      Array.from({ length: 200 }, (_, i) => ({
+        id: `selected-${i}`,
+        podcastId: "selected-show",
+        title: `Episode ${i}`,
+        audioUrl: `https://example.com/${i}.mp3`,
+      })),
+    );
+    assert.deepEqual(
+      db
+        .listEpisodesByIds(["selected-99", "missing", "selected-1", "selected-99"])
+        .map((e) => e.id),
+      ["selected-99", "selected-1"],
+    );
+    assert.deepEqual(db.listEpisodesByIds([]), []);
+    assert.throws(() => db.listEpisodesByIds(Array(1001).fill("selected-1")), /Invalid/);
+    assert.equal(db.listEpisodes().length, 200);
+  } finally {
+    db.close();
+  }
+});

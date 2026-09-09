@@ -267,6 +267,8 @@ The iOS interface follows Apple’s Human Interface Guidelines: native navigatio
 
 ### Desktop controls and visual quality
 
+Implemented: shared-session macOS menu-bar controls/player, cover-context-menu miniplayer, configurable local/global shortcuts with conflict handling, and the shared Rajio template icon. Settings follows the full-width single-page structure. See [desktop controls](desktop-controls.md) and [measured desktop performance](desktop-performance.md).
+
 - Add macOS application menu commands and configurable keyboard bindings, including conflict handling.
 - Validate and complete system Now Playing and media-key integration.
 - Add menu-bar controls and a menu-bar player.

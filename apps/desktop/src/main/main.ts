@@ -25,6 +25,15 @@ import { resolveDefaultDownloadDirectory } from "./settings";
 const mainDir =
   typeof __dirname === "string" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 const appId = "com.scchan.rajio";
+const timingPath = process.env.RAJIO_TIMING_PATH;
+const startupTimings: Record<string, number> = { processTimeOrigin: performance.timeOrigin };
+function markStartup(name: string) {
+  if (!timingPath) return;
+  startupTimings[name] = Date.now();
+  writeFileSync(timingPath, JSON.stringify(startupTimings));
+}
+markStartup("mainModule");
+
 const legacyUserDataPath = path.join(app.getPath("appData"), "Newcastle");
 const rendererDevServerUrl = process.env.NEWCASTLE_RENDERER_URL;
 const appIconFilename = process.platform === "darwin" ? "icon-macos.png" : "icon.png";
@@ -33,7 +42,6 @@ const appIconPath = app.isPackaged
   : path.resolve(mainDir, "../../resources", appIconFilename);
 const appIcon = nativeImage.createFromPath(appIconPath);
 const startupEpisodeArtworkLimit = 24;
-const startupArtworkWaitMs = 3_000;
 let mainWindow: BrowserWindow | undefined;
 let quitting = false;
 app.on("before-quit", (event) => {
@@ -72,7 +80,8 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-function createMainWindow(artworkReady: Promise<unknown> = Promise.resolve()): BrowserWindow {
+function createMainWindow(): BrowserWindow {
+  markStartup("windowCreateStart");
   const window = new BrowserWindow({
     height: 860,
     icon: appIcon,
@@ -96,6 +105,9 @@ function createMainWindow(artworkReady: Promise<unknown> = Promise.resolve()): B
     width: 1280,
   });
 
+  markStartup("windowCreated");
+  window.webContents.once("dom-ready", () => markStartup("domReady"));
+  window.webContents.once("did-finish-load", () => markStartup("rendererLoaded"));
   window.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
@@ -105,11 +117,11 @@ function createMainWindow(artworkReady: Promise<unknown> = Promise.resolve()): B
   registerExternalNavigation(window.webContents, (url) => shell.openExternal(url));
 
   window.once("ready-to-show", () => {
-    void artworkReady.finally(() => {
-      if (!startupSmokePath && !window.isDestroyed()) {
-        window.show();
-      }
-    });
+    markStartup("readyToShow");
+    if (!startupSmokePath && !window.isDestroyed()) {
+      window.show();
+      markStartup("shown");
+    }
   });
 
   if (startupSmokePath) {
@@ -146,11 +158,14 @@ app.on("second-instance", () => {
 void app
   .whenReady()
   .then(() => {
+    markStartup("appReady");
     if (process.platform === "darwin" && !app.isPackaged && app.dock && !appIcon.isEmpty()) {
       app.dock.setIcon(appIcon);
     }
 
+    markStartup("databaseStart");
     const db = createLocalDatabase(app.getPath("userData"));
+    markStartup("databaseReady");
     setLanguage(db.getSettings().language, app.getLocale());
     const imageCache = registerImageCacheProtocol(
       path.join(app.getPath("userData"), "image-cache-v1"),
@@ -161,11 +176,8 @@ void app
       ...podcastArtworkUrls,
       ...episodeArtworkUrls.slice(0, startupEpisodeArtworkLimit),
     ]);
-    const allArtworkUrls = uniqueArtworkUrls([...podcastArtworkUrls, ...episodeArtworkUrls]);
-    const initialArtworkWarmup = imageCache.warm(startupArtworkUrls);
-    const startupArtworkReady = waitUpTo(initialArtworkWarmup, startupArtworkWaitMs);
-
-    void initialArtworkWarmup.then(() => imageCache.warm(allArtworkUrls));
+    // Render immediately; prefetch only the first visible artwork batch.
+    void imageCache.warm(startupArtworkUrls);
     const defaultDownloadDirectory = process.env.RAJIO_USER_DATA_DIR
       ? path.join(app.getPath("userData"), "Downloads")
       : resolveDefaultDownloadDirectory(
@@ -175,21 +187,51 @@ void app
           app.getPath("downloads"),
         );
     const refresh = registerIpcHandlers(db, defaultDownloadDirectory);
-    mainWindow = createMainWindow(startupArtworkReady);
-    installDesktopControls(mainWindow, db, (kind) => {
-      const surface = new BrowserWindow({ width: 400, height: 180, minWidth: 360, minHeight: 180,
-        show: false, title: 'Rajio', alwaysOnTop: true, skipTaskbar: true,
-        ...(kind === 'tray' ? { frame: false, resizable: false } : { titleBarStyle: 'hiddenInset' as const }),
-        ...(process.platform === 'darwin' ? { vibrancy: 'popover' as const } : {}),
-        webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(mainDir, '../preload/index.cjs'), sandbox: false },
-      });
-      surface.on('close', event => { if (!quitting) { event.preventDefault(); surface.hide(); } });
-      if (kind === 'tray') surface.on('blur', () => surface.hide());
-      registerExternalNavigation(surface.webContents, url => shell.openExternal(url));
-      if (rendererDevServerUrl) { const url = new URL(rendererDevServerUrl); url.searchParams.set('surface',kind); void surface.loadURL(url.toString()); }
-      else void surface.loadFile(path.join(mainDir, '../renderer/index.html'), {query:{surface:kind}});
-      return surface;
-    }, path.join(path.dirname(appIconPath), "trayTemplate.png"));
+    mainWindow = createMainWindow();
+    installDesktopControls(
+      mainWindow,
+      db,
+      (kind) => {
+        const surface = new BrowserWindow({
+          width: 400,
+          height: kind === "tray" ? 166 : 180,
+          minWidth: 360,
+          minHeight: kind === "tray" ? 166 : 180,
+          show: false,
+          title: "Rajio",
+          alwaysOnTop: true,
+          skipTaskbar: true,
+          ...(kind === "tray"
+            ? { frame: false, resizable: false }
+            : { titleBarStyle: "hiddenInset" as const }),
+          ...(process.platform === "darwin" ? { vibrancy: "popover" as const } : {}),
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            preload: path.join(mainDir, "../preload/index.cjs"),
+            sandbox: false,
+          },
+        });
+        surface.on("close", (event) => {
+          if (!quitting) {
+            event.preventDefault();
+            surface.hide();
+          }
+        });
+        if (kind === "tray") surface.on("blur", () => surface.hide());
+        registerExternalNavigation(surface.webContents, (url) => shell.openExternal(url));
+        if (rendererDevServerUrl) {
+          const url = new URL(rendererDevServerUrl);
+          url.searchParams.set("surface", kind);
+          void surface.loadURL(url.toString());
+        } else
+          void surface.loadFile(path.join(mainDir, "../renderer/index.html"), {
+            query: { surface: kind },
+          });
+        return surface;
+      },
+      path.join(path.dirname(appIconPath), "trayTemplate.png"),
+    );
     const refreshLibrary = () => {
       void refresh.run().catch((error) => console.error(t("Refresh failed"), error));
     };
@@ -222,18 +264,6 @@ void app
 
 function uniqueArtworkUrls(urls: Array<string | undefined>): string[] {
   return [...new Set(urls.filter((url): url is string => Boolean(url)))];
-}
-
-function waitUpTo(task: Promise<unknown>, timeoutMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timeout = setTimeout(resolve, timeoutMs);
-    const settle = () => {
-      clearTimeout(timeout);
-      resolve();
-    };
-
-    void task.then(settle, settle);
-  });
 }
 
 app.on("window-all-closed", () => {

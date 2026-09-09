@@ -93,6 +93,8 @@ pnpm test
 ## Additional Docs
 
 - [Product roadmap](docs/ROADMAP.md)
+- [Desktop controls and shortcuts](docs/desktop-controls.md)
+- [Desktop performance measurements](docs/desktop-performance.md)
 - [Shared Rust core: build, bindings, and tests](docs/shared-core.md)
 - [Export OPML from Cosmos (小宇宙)](docs/opml-cosmos.md)
 

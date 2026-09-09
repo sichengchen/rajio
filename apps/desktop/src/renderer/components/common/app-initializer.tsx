@@ -8,7 +8,8 @@ export function AppInitializer() {
   const initializeStore = usePodcastStore((state) => state.initializeStore);
 
   useEffect(() => {
-    void initializeStore();
+    performance.mark("rajio:first-react-effect");
+    void initializeStore().then(() => performance.mark("rajio:library-ready"));
     return desktopApi.library.onChanged?.(() => {
       void initializeStore(true);
     });

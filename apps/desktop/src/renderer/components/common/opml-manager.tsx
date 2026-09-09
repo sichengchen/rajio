@@ -1,6 +1,6 @@
 import { t } from "../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { useRef } from "react";
 import { Download, Upload } from "lucide-react";
@@ -52,7 +52,9 @@ export function OPMLManager() {
     } catch (error) {
       console.error("OPML import error:", error);
       toast.error(
-        t("Failed to import OPML file: {error}", { error: error instanceof Error ? error.message : t("Unknown error") }),
+        t("Failed to import OPML file: {error}", {
+          error: error instanceof Error ? error.message : t("Unknown error"),
+        }),
       );
     }
 
@@ -71,7 +73,9 @@ export function OPMLManager() {
         disabled={podcasts.length === 0}
         className="justify-start whitespace-nowrap px-3"
       >
-        <Download className="h-4 w-4" />{t("Export OPML")}</Button>
+        <Download className="h-4 w-4" />
+        {t("Export OPML")}
+      </Button>
 
       <Button
         variant="outline"
