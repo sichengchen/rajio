@@ -26,6 +26,7 @@ final class OfflineAcceptanceTests: XCTestCase {
     ).firstMatch
     XCTAssertTrue(episode.waitForExistence(timeout: 10))
     episode.tap()
+    XCTAssertTrue(app.links["an external link"].waitForExistence(timeout: 10))
     let download = app.buttons["Download"]
     XCTAssertTrue(download.waitForExistence(timeout: 5))
     download.tap()

@@ -161,7 +161,7 @@ struct EpisodeMenu: View {
 }
 
 struct EpisodeDetailView: View {
-  @State private var notesHeight: CGFloat = 1
+  @State private var notesHeight: CGFloat = 160
   let episode: Episode
   @ObservedObject var model: LibraryModel
   @ObservedObject var audio: AudioPlayer
