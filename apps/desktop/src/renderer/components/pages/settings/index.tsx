@@ -1,3 +1,6 @@
+import { languages, getLanguageChoice, setLanguage } from "../../../../shared/i18n";
+import { t, getLocale } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -21,6 +24,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { desktopApi } from "@/desktop-api";
 
 export function SettingsPage() {
+  useLocale();
+  const [language, setLanguageChoice] = useState(getLanguageChoice);
   const [refreshState, setRefreshState] = useState<{
     running: boolean;
     checkedAt?: string;
@@ -38,7 +43,7 @@ export function SettingsPage() {
     try {
       await usePodcastStore.getState().refreshAllPodcasts();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Refresh failed");
+      toast.error(error instanceof Error ? error.message : t("Refresh failed"));
     } finally {
       const state = await desktopApi.library.refreshState?.();
       if (state) setRefreshState(state);
@@ -120,10 +125,10 @@ export function SettingsPage() {
       const selectedDirectory = await desktopApi.settings.chooseDownloadDirectory();
       if (selectedDirectory) {
         setDownloadDirectory(selectedDirectory);
-        toast.success("Download folder updated");
+        toast.success(t("Download folder updated"));
       }
     } catch (error) {
-      toast.error("Failed to update the download folder");
+      toast.error(t("Failed to update the download folder"));
       console.error("Choose download directory error:", error);
     } finally {
       setIsChoosingDownloadDirectory(false);
@@ -135,9 +140,9 @@ export function SettingsPage() {
     try {
       await clearAllDownloads();
       await refreshStorageStats();
-      toast.success("All downloads have been cleared successfully!");
+      toast.success(t("All downloads have been cleared successfully!"));
     } catch (error) {
-      toast.error("Failed to clear downloads. Please try again.");
+      toast.error(t("Failed to clear downloads. Please try again."));
       console.error("Clear downloads error:", error);
     } finally {
       setIsClearingDownloads(false);
@@ -148,9 +153,9 @@ export function SettingsPage() {
     setIsClearingData(true);
     try {
       await clearAllData();
-      toast.success("All data has been cleared successfully!");
+      toast.success(t("All data has been cleared successfully!"));
     } catch (error) {
-      toast.error("Failed to clear data. Please try again.");
+      toast.error(t("Failed to clear data. Please try again."));
       console.error("Clear data error:", error);
     } finally {
       setIsClearingData(false);
@@ -161,30 +166,42 @@ export function SettingsPage() {
     <>
       <div className="mx-auto flex max-w-4xl flex-col gap-8 px-2 py-6">
         {/* Theme Settings */}
-        <SettingsGroup title="Appearance">
+        <SettingsGroup title={t("Appearance")}>
           <SettingsSelect
-            label="Theme"
-            description="Choose your preferred theme"
+            label={t("Language")}
+            value={language}
+            options={languages.map(item => ({ ...item, label: item.value === "system" ? t("Follow System") : item.label }))}
+            onValueChange={(value) => {
+              void desktopApi.settings.set({ language: value }).then(() => {
+                setLanguage(value, navigator.language);
+                setLanguageChoice(getLanguageChoice());
+                document.documentElement.lang = value === "system" ? navigator.language : value;
+              }).catch(() => toast.error(t("Unable to change language")));
+            }}
+          />
+          <SettingsSelect
+            label={t("Theme")}
+            description={t("Choose your preferred theme")}
             value={theme || "system"}
             onValueChange={handleThemeChange}
             options={[
-              { value: "system", label: "Follow System" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "system", label: t("Follow System") },
+              { value: "light", label: t("Light") },
+              { value: "dark", label: t("Dark") },
             ]}
-            placeholder="Select theme"
+            placeholder={t("Select theme")}
           />
         </SettingsGroup>
 
-        <SettingsGroup title="Subscriptions">
+        <SettingsGroup title={t("Subscriptions")}>
           <SettingsAction
-            label="Refresh podcasts"
+            label={t("Refresh podcasts")}
             description={
               refreshState.checkedAt
-                ? `Last checked: ${new Date(refreshState.checkedAt).toLocaleString()}`
-                : "Podcasts refresh automatically when Rajio opens and resumes."
+                ? t("Last checked: {date}", { date: new Date(refreshState.checkedAt).toLocaleString(getLocale()) })
+                : t("Podcasts refresh automatically when Rajio opens and resumes.")
             }
-            actionLabel={refreshState.running ? "Refreshing…" : "Refresh now"}
+            actionLabel={refreshState.running ? "Refreshing…" : t("Refresh now")}
             onAction={refreshFeeds}
             disabled={refreshState.running}
           />
@@ -195,64 +212,64 @@ export function SettingsPage() {
           ))}
         </SettingsGroup>
         {/* Playback Settings */}
-        <SettingsGroup title="Playback">
+        <SettingsGroup title={t("Playback")}>
           <SettingsSelect
-            label="Skip Interval"
-            description="Time to skip forward/backward"
+            label={t("Skip Interval")}
+            description={t("Time to skip forward/backward")}
             value={(preferences.skipInterval || 30).toString()}
             onValueChange={handleSkipIntervalChange}
             options={[
-              { value: "5", label: "5 seconds" },
-              { value: "10", label: "10 seconds" },
-              { value: "15", label: "15 seconds" },
-              { value: "30", label: "30 seconds" },
-              { value: "60", label: "60 seconds" },
+              { value: "5", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(5) },
+              { value: "10", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(10) },
+              { value: "15", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(15) },
+              { value: "30", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(30) },
+              { value: "60", label: new Intl.NumberFormat(getLocale(), { style: "unit", unit: "second", unitDisplay: "long" }).format(60) },
             ]}
-            placeholder="Select interval"
+            placeholder={t("Select interval")}
           />
 
           <SettingsSwitch
-            label="Auto Play"
-            description="Automatically play next episode"
+            label={t("Auto Play")}
+            description={t("Automatically play next episode")}
             checked={preferences.autoPlay || false}
             onCheckedChange={handleAutoPlayChange}
           />
         </SettingsGroup>
 
         {/* Search Settings */}
-        <SettingsGroup title="Search">
+        <SettingsGroup title={t("Search")}>
           <SettingsSwitch
-            label="Search from iTunes"
-            description="Enable podcast discovery from iTunes in the Search tab"
+            label={t("Search from iTunes")}
+            description={t("Enable podcast discovery from iTunes in the Search tab")}
             checked={preferences.itunesSearchEnabled ?? true}
             onCheckedChange={handleItunesSearchEnabledChange}
           />
         </SettingsGroup>
 
         {/* Storage Management */}
-        <SettingsGroup title="Storage Management">
+        <SettingsGroup title={t("Storage Management")}>
           <SettingsSelect
-            label="Download storage limit"
-            description="Maximum space used by downloaded audio"
+            label={t("Download storage limit")}
+            description={t("Maximum space used by downloaded audio")}
             value={downloadLimit}
             options={[
-              { value: "536870912", label: "512 MB" },
-              { value: "2147483648", label: "2 GB" },
-              { value: "10737418240", label: "10 GB" },
-              { value: "53687091200", label: "50 GB" },
+              { value: "536870912", label: t("512 MB") },
+              { value: "2147483648", label: t("2 GB") },
+              { value: "10737418240", label: t("10 GB") },
+              { value: "53687091200", label: t("50 GB") },
             ]}
             onValueChange={(value) => {
               void desktopApi.settings
                 .set({ downloadLimitBytes: value })
                 .then(() => setDownloadLimit(value))
-                .catch(() => toast.error("Unable to update download limit"));
+                .catch(() => toast.error(t("Unable to update download limit")));
             }}
           />
           <SettingsAction
-            label="Download Folder"
-            description={downloadDirectory ?? "Choose where new downloads are saved"}
-            actionLabel={downloadDirectory ? "Change Folder" : "Choose Folder"}
-            loadingLabel="Choosing Folder…"
+            label={t("Download Folder")}
+            description={downloadDirectory ?? t("Choose where new downloads are saved")}
+            actionLabel={downloadDirectory ? t("Change Folder") : t("Choose Folder")}
+            loadingLabel={t("Choosing Folder…")}
             onAction={handleChooseDownloadDirectory}
             variant="outline"
             icon={FolderOpen}
@@ -260,14 +277,14 @@ export function SettingsPage() {
           />
 
           <SettingsStats
-            label="Storage Statistics"
+            label={t("Storage Statistics")}
             stats={[
               {
-                label: isMobile ? "Downloaded" : "Downloaded Episodes",
+                label: isMobile ? t("Downloaded") : t("Downloaded Episodes"),
                 value: storageStats?.downloadedEpisodes || 0,
               },
               {
-                label: "Storage Used",
+                label: t("Storage Used"),
                 value: formatFileSize(storageStats?.totalSize || 0),
               },
             ]}
@@ -276,18 +293,17 @@ export function SettingsPage() {
           {storageStats && storageStats.totalSize > 500 * 1024 * 1024 && (
             <SettingsAlert variant="warning" icon={AlertCircle}>
               <p className="text-muted-foreground">
-                You&apos;re using over 500MB of storage. Consider removing some downloads to free up
-                space.
+                {t("Storage use exceeds 500 MB. Remove downloads to free up space.")}
               </p>
             </SettingsAlert>
           )}
 
           <SettingsDivider>
             <SettingsAction
-              label="Clear All Downloads"
-              description="Delete all downloaded episodes to free up storage space"
-              actionLabel="Clear Downloads"
-              loadingLabel="Clearing..."
+              label={t("Clear All Downloads")}
+              description={t("Delete all downloaded episodes to free up storage space")}
+              actionLabel={t("Clear Downloads")}
+              loadingLabel={t("Clearing...")}
               onAction={handleClearAllDownloads}
               variant="destructive"
               icon={Trash2}
@@ -298,47 +314,44 @@ export function SettingsPage() {
               }
               loading={isClearingDownloads}
               confirmDialog={{
-                title: "Clear All Downloads",
-                description: `This action will permanently delete all downloaded episodes. This will free up ${formatFileSize(
-                  storageStats?.totalSize || 0,
-                )} of storage space. You can re-download them later from the podcast pages.`,
-                actionLabel: "Clear Downloads",
+                title: t("Clear All Downloads"),
+                description: t("Delete all downloads and free {size}? Subscriptions and playback progress will be kept.", { size: formatFileSize(storageStats?.totalSize || 0) }),
+                actionLabel: t("Clear Downloads"),
               }}
             />
           </SettingsDivider>
         </SettingsGroup>
 
         {/* Data Management */}
-        <SettingsGroup title="Data Management">
+        <SettingsGroup title={t("Data Management")}>
           <SettingsItem
-            label="OPML Management"
-            description="Import or export your podcast subscriptions"
+            label={t("OPML Management")}
+            description={t("Import or export your podcast subscriptions")}
           >
             <OPMLManager />
           </SettingsItem>
 
           <SettingsDivider>
             <SettingsAction
-              label="Reset Application"
-              description="Permanently delete all podcasts, episodes, and playback progress"
-              actionLabel="Clear All Data"
-              loadingLabel="Clearing..."
+              label={t("Reset Application")}
+              description={t("Permanently delete all podcasts, episodes, and playback progress")}
+              actionLabel={t("Clear All Data")}
+              loadingLabel={t("Clearing...")}
               onAction={handleClearAllData}
               variant="destructive"
               icon={Trash2}
               disabled={podcasts.length === 0 || isClearingData}
               loading={isClearingData}
               confirmDialog={{
-                title: "Clear All Data",
-                description: `This action will permanently delete:\n• All podcast subscriptions (${podcasts.length} podcasts)\n• All downloaded episode information\n• All playback progress and history\n• All app preferences (except theme)\n\nThis action cannot be undone.`,
-                actionLabel: "Clear All Data",
+                title: t("Clear All Data"),
+                description: t("Permanently delete {count} subscriptions, downloads, playback history, and preferences? This cannot be undone.", { count: podcasts.length }),
+                actionLabel: t("Clear All Data"),
               }}
             />
           </SettingsDivider>
         </SettingsGroup>
 
-        <div className="text-xs text-muted-foreground text-center">
-          Version {APP_VERSION} · Created by{" "}
+        <div className="text-xs text-muted-foreground text-center">{t("Version")}{APP_VERSION} · Created by{" "}
           <a
             href="https://www.scchan.com"
             target="_blank"

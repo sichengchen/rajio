@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import type { ReactNode } from "react";
@@ -52,17 +54,14 @@ function PodcastActionItems({
   onRefresh,
   onRequestRemove,
 }: Omit<PodcastActionProps, "podcastTitle"> & { context?: boolean }) {
+  useLocale();
   if (context) {
     return (
       <ContextMenuGroup>
         <ContextMenuItem disabled={isRefreshing} onSelect={onRefresh}>
-          <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
-          Update show
-        </ContextMenuItem>
+          <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />{t("Update show")}</ContextMenuItem>
         <ContextMenuItem onSelect={onRequestRemove} variant="destructive">
-          <Trash2 />
-          Remove from library
-        </ContextMenuItem>
+          <Trash2 />{t("Remove from library")}</ContextMenuItem>
       </ContextMenuGroup>
     );
   }
@@ -70,13 +69,9 @@ function PodcastActionItems({
   return (
     <DropdownMenuGroup>
       <DropdownMenuItem disabled={isRefreshing} onSelect={onRefresh}>
-        <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
-        Update show
-      </DropdownMenuItem>
+        <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />{t("Update show")}</DropdownMenuItem>
       <DropdownMenuItem onSelect={onRequestRemove} variant="destructive">
-        <Trash2 />
-        Remove from library
-      </DropdownMenuItem>
+        <Trash2 />{t("Remove from library")}</DropdownMenuItem>
     </DropdownMenuGroup>
   );
 }
@@ -89,14 +84,15 @@ export function PodcastActionsMenu({
   open,
   podcastTitle,
 }: PodcastActionsMenuProps) {
+  useLocale();
   return (
     <DropdownMenu onOpenChange={onOpenChange} open={open}>
       <DropdownMenuTrigger asChild>
         <Button
-          aria-label={`More actions for ${podcastTitle}`}
+          aria-label={t("More actions for {name}", { name: podcastTitle })}
           className="mr-1 size-7 shrink-0 text-muted-foreground opacity-70 group-hover/menu-item:opacity-100 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[state=open]:opacity-100"
           size="icon"
-          title={`More actions for ${podcastTitle}`}
+          title={t("More actions for {name}", { name: podcastTitle })}
           variant="ghost"
         >
           <Ellipsis data-icon="inline-start" />
@@ -119,6 +115,7 @@ export function PodcastActionsContextMenu({
   onRefresh,
   onRequestRemove,
 }: PodcastActionsContextMenuProps) {
+  useLocale();
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
@@ -147,18 +144,18 @@ export function RemovePodcastDialog({
   onOpenChange,
   podcast,
 }: RemovePodcastDialogProps) {
+  useLocale();
   return (
     <AlertDialog onOpenChange={onOpenChange} open={podcast !== null}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove this show from your library?</AlertDialogTitle>
+          <AlertDialogTitle>{t("Remove this show from your library?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Rajio will remove &ldquo;{podcast?.title}&rdquo; and its episodes from your library.
-            Downloaded files for this show will also be removed.
+            {t("Remove “{name}” and its downloaded episodes from this device?", { name: podcast?.title ?? "" })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isRemoving}>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-white hover:bg-destructive/90"
             disabled={isRemoving}
@@ -167,7 +164,7 @@ export function RemovePodcastDialog({
               void onConfirm();
             }}
           >
-            {isRemoving ? "Removing..." : "Remove"}
+            {isRemoving ? t("Removing...") : t("Remove")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

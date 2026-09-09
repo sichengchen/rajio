@@ -1,3 +1,4 @@
+import { t } from "../shared/i18n";
 import { existsSync } from "node:fs";
 import { applyLibrary } from "@rajio-app/core-wasm/node";
 import { pathToFileURL } from "node:url";
@@ -15,7 +16,7 @@ export class PlaybackService {
   async getSource(episodeId: string): Promise<PlaybackSource> {
     const episode = this.db.getEpisode(episodeId);
     if (!episode) {
-      throw new Error("Episode not found");
+      throw new Error(t("Episode not found"));
     }
 
     if (episode.downloadedPath && existsSync(episode.downloadedPath)) {
@@ -42,7 +43,7 @@ export class PlaybackService {
     const episode = this.db.getEpisode(progress.episodeId);
     const podcast = this.db.getPodcast(progress.podcastId);
     if (!episode || !podcast || episode.podcastId !== podcast.id) {
-      throw new Error("Episode not found");
+      throw new Error(t("Episode not found"));
     }
 
     const now = new Date().toISOString();

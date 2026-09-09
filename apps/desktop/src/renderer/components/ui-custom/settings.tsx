@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 import * as React from "react";
 import { LucideIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -39,6 +41,7 @@ export function SettingsGroup({
   children,
   className,
 }: SettingsGroupProps) {
+  useLocale();
   return (
     <section className={cn("flex flex-col gap-1", className)} aria-label={title}>
       <header className="flex flex-col gap-1 border-b border-border/60 pb-3">
@@ -69,6 +72,7 @@ export function SettingsItem({
   children,
   className,
 }: SettingsItemProps) {
+  useLocale();
   return (
     <div
       className={cn(
@@ -112,6 +116,7 @@ export function SettingsSwitch({
   disabled,
   className,
 }: SettingsSwitchProps) {
+  useLocale();
   const controlId = React.useId();
   return (
     <SettingsItem
@@ -158,6 +163,7 @@ export function SettingsSelect({
   disabled,
   className,
 }: SettingsSelectProps) {
+  useLocale();
   const controlId = React.useId();
   return (
     <SettingsItem
@@ -170,7 +176,7 @@ export function SettingsSelect({
         <SelectTrigger
           id={controlId}
           aria-describedby={description ? `${controlId}-description` : undefined}
-          className="w-full sm:w-40"
+          className="w-full sm:w-56"
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -218,6 +224,7 @@ export function SettingsAction({
   loading,
   className,
 }: SettingsActionProps) {
+  useLocale();
   const button = (
     <Button
       variant={variant}
@@ -242,7 +249,7 @@ export function SettingsAction({
               <AlertDialogDescription>{confirmDialog.description}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={onAction}
                 className={cn(
@@ -277,6 +284,7 @@ interface SettingsStatsProps {
 }
 
 export function SettingsStats({ label, description, stats, className }: SettingsStatsProps) {
+  useLocale();
   return (
     <div className={cn("flex flex-col gap-3 py-4", className)}>
       {(label || description) && (
@@ -304,6 +312,7 @@ interface SettingsDividerProps {
 }
 
 export function SettingsDivider({ className, children }: SettingsDividerProps) {
+  useLocale();
   return <div className={cn("border-border/60", className)}>{children}</div>;
 }
 
@@ -321,6 +330,7 @@ export function SettingsAlert({
   children,
   className,
 }: SettingsAlertProps) {
+  useLocale();
   const variantStyles = {
     default: "border-border bg-muted/50",
     warning: "border-border bg-muted/50",

@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +21,7 @@ interface EpisodePageProps {
 }
 
 export function EpisodePage({ episodeId }: EpisodePageProps) {
+  useLocale();
   const navigate = useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -53,7 +56,7 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
   }, [episodeId, getEpisode]);
 
   const podcast = podcasts.find((item) => item.id === episode?.podcastId);
-  const backTitle = (canGoBack ? previousPageTitle : undefined) ?? podcast?.title ?? "What's New";
+  const backTitle = (canGoBack ? previousPageTitle : undefined) ?? podcast?.title ?? t("What's New");
   const handleBack = () => {
     if (canGoBack) {
       router.history.back();
@@ -80,12 +83,10 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
     return (
       <div className="flex min-h-[28rem] items-center justify-center px-6 text-center">
         <div>
-          <p className="font-medium">Episode unavailable</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            It may have been removed from the podcast feed.
-          </p>
+          <p className="font-medium">{t("Episode unavailable")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("It may have been removed from the podcast feed.")}</p>
           <Button className="mt-4" onClick={handleBack} size="sm">
-            {`Back to ${backTitle}`}
+            {t("Back to {name}", { name: backTitle })}
           </Button>
         </div>
       </div>
@@ -139,6 +140,7 @@ export function EpisodePage({ episodeId }: EpisodePageProps) {
 }
 
 function EpisodePageSkeleton() {
+  useLocale();
   return (
     <div className="mx-auto max-w-4xl pb-12 pt-5">
       <div className="mb-1 px-2">

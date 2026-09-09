@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,6 +40,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function AppLayout({ sidebar, mainContent, rightPanel, controlBar }: AppLayoutProps) {
+  useLocale();
   const showNotesOpen = usePodcastStore((state) => state.showNotesOpen);
   const queueOpen = usePodcastStore((state) => state.queueOpen);
   const rightPanelOpen = showNotesOpen || queueOpen;
@@ -216,7 +219,7 @@ export function AppLayout({ sidebar, mainContent, rightPanel, controlBar }: AppL
               {sidebar}
             </div>
 
-            <ResizeHandle ariaLabel="Resize sidebar" onPointerDown={startResize("sidebar")} />
+            <ResizeHandle ariaLabel={t("Resize sidebar")} onPointerDown={startResize("sidebar")} />
 
             {/* Desktop: Main Content Area */}
             <div className="app-drag flex min-w-0 flex-1 overflow-hidden">
@@ -226,7 +229,7 @@ export function AppLayout({ sidebar, mainContent, rightPanel, controlBar }: AppL
               {/* Player Side Panel */}
               {rightPanelOpen && (
                 <ResizeHandle
-                  ariaLabel="Resize player panel"
+                  ariaLabel={t("Resize player panel")}
                   onPointerDown={startResize("rightPanel")}
                 />
               )}
@@ -263,6 +266,7 @@ function ResizeHandle({
   ariaLabel: string;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
+  useLocale();
   return (
     <div
       aria-label={ariaLabel}

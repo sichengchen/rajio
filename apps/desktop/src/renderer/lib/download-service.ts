@@ -1,3 +1,4 @@
+import { t } from "../../shared/i18n";
 import { desktopApi } from "@/desktop-api";
 import type { DownloadProgress, Episode, StorageStats } from "@/lib/types";
 
@@ -62,7 +63,7 @@ export class DownloadService {
       const failed: DownloadProgress = {
         ...started,
         status: "failed",
-        error: result.error ?? "Download failed",
+        error: result.error ?? t("Download failed"),
       };
       progressByEpisode.set(episode.id, failed);
       emit(episode.id, failed);

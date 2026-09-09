@@ -1,3 +1,4 @@
+import { t } from "../shared/i18n";
 import { createWriteStream, existsSync, readdirSync, rmSync } from "node:fs";
 import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
@@ -27,7 +28,7 @@ export class DownloadService {
             episodeId: episode.id,
             progress: 0,
             status: "failed",
-            error: "Downloaded file is missing. Download it again.",
+            error: t("Downloaded file is missing. Download it again."),
           });
         }
       } else if (db.getDownloadStatus(episode.id).status === "downloading") {
@@ -35,7 +36,7 @@ export class DownloadService {
           episodeId: episode.id,
           progress: 0,
           status: "failed",
-          error: "Download interrupted. Try again.",
+          error: t("Download interrupted. Try again."),
         });
       }
     }
@@ -86,7 +87,7 @@ export class DownloadService {
         signal: AbortSignal.any([entry.controller.signal, AbortSignal.timeout(24 * 3600_000)]),
       });
       if (!response.ok) throw new Error("Download failed with HTTP " + response.status);
-      if (!response.body) throw new Error("Download returned no audio");
+      if (!response.body) throw new Error(t("Download returned no audio"));
       const expected = Number(response.headers.get("content-length")) || 0;
       let lastProgress = -1;
       const meter = new Transform({
@@ -98,7 +99,7 @@ export class DownloadService {
           if (stored + pending > limit) {
             callback(
               new Error(
-                "Download storage limit reached. Remove downloads or increase the limit in Settings.",
+                t("Download storage limit reached. Remove downloads or increase the limit in Settings."),
               ),
             );
             return;
@@ -118,8 +119,8 @@ export class DownloadService {
         createWriteStream(temporary, { flags: "wx" }),
         { signal: entry.controller.signal },
       );
-      if (entry.bytes === 0) throw new Error("Download returned no audio");
-      if (!this.db.getEpisode(episodeId)) throw new Error("Episode was removed during download");
+      if (entry.bytes === 0) throw new Error(t("Download returned no audio"));
+      if (!this.db.getEpisode(episodeId)) throw new Error(t("Episode was removed during download"));
       destination = path.join(directory, episode.id + extensionFromUrl(episode.audioUrl));
       await rename(temporary, destination);
       temporary = undefined;
@@ -141,7 +142,7 @@ export class DownloadService {
         status: entry.controller.signal.aborted ? "queued" : "failed",
         ...(entry.controller.signal.aborted
           ? {}
-          : { error: error instanceof Error ? error.message : "Download failed" }),
+          : { error: error instanceof Error ? error.message : t("Download failed") }),
       };
       if (this.db.getEpisode(episodeId)) this.save(status);
       return status;

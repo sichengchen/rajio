@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -6,6 +8,7 @@ import { EpisodeList } from "@/components/common/episode-list";
 import { formatEpisodeDateGroup } from "@/lib/utils";
 
 export function WhatsNewPage() {
+  const locale = useLocale();
   const [isLoading, setIsLoading] = useState(true);
 
   const {
@@ -83,7 +86,7 @@ export function WhatsNewPage() {
     }
 
     return groups;
-  }, [latestEpisodes]);
+  }, [latestEpisodes, locale]);
   const getMetadataItems = useCallback(
     (episode: (typeof latestEpisodes)[number]) => [podcastsById.get(episode.podcastId)?.title],
     [podcastsById],
@@ -97,8 +100,8 @@ export function WhatsNewPage() {
         episodes={latestEpisodes}
         playbackProgress={playbackProgress}
         playEpisode={playEpisode}
-        noEpisodesMessage="No episodes found"
-        noEpisodesMessageDescription="Subscribe to some podcasts to see the latest episodes here"
+        noEpisodesMessage={t("No episodes found")}
+        noEpisodesMessageDescription={t("Subscribe to some podcasts to see the latest episodes here")}
         skeletonCount={7}
         variant="editorial"
       />

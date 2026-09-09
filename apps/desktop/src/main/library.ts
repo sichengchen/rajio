@@ -1,3 +1,4 @@
+import { t } from "../shared/i18n";
 import { applyLibrary } from "@rajio-app/core-wasm/node";
 import type {
   EpisodePage,
@@ -62,7 +63,7 @@ export class LibraryService {
 
   private async refreshFeed(podcastId: string, force: boolean): Promise<PodcastSummary> {
     const existing = this.db.getPodcast(podcastId);
-    if (!existing) throw new Error("Podcast not found");
+    if (!existing) throw new Error(t("Podcast not found"));
     const previous = this.db.getFeedHTTP(podcastId);
     if (!force && previous && previous.nextAttempt > Date.now()) {
       if (previous.error) throw new Error(previous.error);
@@ -74,7 +75,7 @@ export class LibraryService {
         : { feed: await this.rss.fetchFeed(existing.feedUrl) };
       return this.db.transaction(() => {
         const current = this.db.getPodcast(podcastId);
-        if (!current) throw new Error("Podcast not found");
+        if (!current) throw new Error(t("Podcast not found"));
         const now = Date.now();
         this.db.saveFeedHTTP(podcastId, {
           etag: response.etag,

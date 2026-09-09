@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useRef } from "react";
@@ -7,6 +9,7 @@ import { usePodcastStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export function OPMLManager() {
+  useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { podcasts, importFromOPML, progressDialog } = usePodcastStore();
 
@@ -21,7 +24,7 @@ export function OPMLManager() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("OPML file exported successfully!");
+    toast.success(t("OPML file exported successfully!"));
   };
 
   const handleImportClick = () => {
@@ -37,19 +40,19 @@ export function OPMLManager() {
       const result = await importFromOPML(text);
 
       if (result.imported > 0) {
-        toast.success(`Successfully imported ${result.imported} podcast(s)!`);
+        toast.success(t("Imported podcasts: {count}", { count: result.imported }));
         if (result.errors > 0) {
           toast.warning(
-            `${result.errors} podcast(s) could not be imported. The feed may be unavailable or require access.`,
+            t("Feeds unavailable or requiring access: {count}", { count: result.errors }),
           );
         }
       } else {
-        toast.error("No podcasts were imported. Please check the OPML file format.");
+        toast.error(t("No podcasts were imported. Please check the OPML file format."));
       }
     } catch (error) {
       console.error("OPML import error:", error);
       toast.error(
-        `Failed to import OPML file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("Failed to import OPML file: {error}", { error: error instanceof Error ? error.message : t("Unknown error") }),
       );
     }
 
@@ -68,9 +71,7 @@ export function OPMLManager() {
         disabled={podcasts.length === 0}
         className="whitespace-nowrap"
       >
-        <Download className="h-3 w-3 mr-1" />
-        Export OPML
-      </Button>
+        <Download className="h-3 w-3 mr-1" />{t("Export OPML")}</Button>
 
       <Button
         variant="outline"
@@ -80,7 +81,7 @@ export function OPMLManager() {
         disabled={progressDialog.isOpen}
       >
         <Upload className="h-3 w-3 mr-1" />
-        {progressDialog.isOpen ? "Importing..." : "Import OPML"}
+        {progressDialog.isOpen ? t("Importing...") : t("Import OPML")}
       </Button>
 
       <input

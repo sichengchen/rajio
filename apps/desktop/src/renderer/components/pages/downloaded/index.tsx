@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -5,6 +7,7 @@ import { usePodcastStore } from "@/lib/store";
 import { EpisodeList } from "@/components/common/episode-list";
 
 export function DownloadedPage() {
+  useLocale();
   const {
     playEpisode,
     playbackProgress,
@@ -65,8 +68,8 @@ export function DownloadedPage() {
       episodes={processedEpisodes}
       playbackProgress={playbackProgress}
       playEpisode={playEpisode}
-      noEpisodesMessage="No episodes downloaded yet"
-      noEpisodesMessageDescription="Download episodes to play them offline"
+      noEpisodesMessage={t("No episodes downloaded yet")}
+      noEpisodesMessageDescription={t("Download episodes to play them offline")}
       onDeleteComplete={handleRefresh}
     />
   );

@@ -1,4 +1,6 @@
-import { BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from "electron";
+import { setLanguage } from "../shared/i18n";
+import { t } from "../shared/i18n";
+import { app, BrowserWindow, dialog, ipcMain, type OpenDialogOptions } from "electron";
 
 import { ipcChannels } from "../shared/ipc";
 import { DownloadService } from "./downloads";
@@ -77,10 +79,10 @@ export function registerIpcHandlers(
 
   ipcMain.handle(ipcChannels.settings.chooseDownloadDirectory, async (event) => {
     const options: OpenDialogOptions = {
-      buttonLabel: "Choose",
+      buttonLabel: t("Choose"),
       defaultPath: settings.getDownloadDirectory(),
       properties: ["openDirectory", "createDirectory"],
-      title: "Choose Download Folder",
+      title: t("Choose Download Folder"),
     };
     const parentWindow = BrowserWindow.fromWebContents(event.sender);
     const result = parentWindow
@@ -95,7 +97,11 @@ export function registerIpcHandlers(
     return settings.setDownloadDirectory(downloadDirectory);
   });
   ipcMain.handle(ipcChannels.settings.get, () => settings.get());
-  ipcMain.handle(ipcChannels.settings.set, (_event, nextSettings) => settings.set(nextSettings));
+  ipcMain.handle(ipcChannels.settings.set, async (_event, nextSettings) => {
+    const result = await settings.set(nextSettings);
+    setLanguage(result.language, app.getLocale());
+    return result;
+  });
 
   ipcMain.handle(ipcChannels.sync.now, () => sync.syncNow());
   return refresh;

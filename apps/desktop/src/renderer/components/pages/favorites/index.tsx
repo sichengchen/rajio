@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useMemo } from "react";
@@ -6,6 +8,7 @@ import { EpisodeList } from "@/components/common/episode-list";
 import { usePodcastStore } from "@/lib/store";
 
 export function FavoritesPage() {
+  useLocale();
   const favoriteEpisodes = usePodcastStore((state) => state.favoriteEpisodes);
   const playbackProgress = usePodcastStore((state) => state.playbackProgress);
   const podcasts = usePodcastStore((state) => state.podcasts);
@@ -27,8 +30,8 @@ export function FavoritesPage() {
       currentEpisodeId={currentEpisodeId}
       episodes={episodes}
       isLoadingEpisodes={false}
-      noEpisodesMessage="No favorite episodes yet"
-      noEpisodesMessageDescription="Save an episode from its menu to find it here"
+      noEpisodesMessage={t("No favorite episodes yet")}
+      noEpisodesMessageDescription={t("Save an episode from its menu to find it here")}
       playbackProgress={playbackProgress}
       playEpisode={playEpisode}
     />

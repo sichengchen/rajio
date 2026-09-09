@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 /**
@@ -65,6 +67,7 @@ export function EpisodeList({
   skeletonCount,
   variant = "default",
 }: EpisodeListProps) {
+  useLocale();
   const openEpisode = useOpenEpisode();
   const variantStyles = episodeListVariantStyles[variant];
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -100,8 +103,8 @@ export function EpisodeList({
     return (
       <div className="flex items-center justify-center min-h-[400px] py-12">
         <div className="text-center text-muted-foreground">
-          <p>{noEpisodesMessage ?? "No episodes found"}</p>
-          <p className="text-sm">{noEpisodesMessageDescription ?? "Try refreshing the podcast"}</p>
+          <p>{noEpisodesMessage ?? t("No episodes found")}</p>
+          <p className="text-sm">{noEpisodesMessageDescription ?? t("Try refreshing the podcast")}</p>
         </div>
       </div>
     );
@@ -127,7 +130,7 @@ export function EpisodeList({
               onDownloadComplete={onDownloadComplete}
             >
               <ListItem
-                aria-label={`Open ${episode.title}`}
+                aria-label={t("Open {name}", { name: episode.title })}
                 className={cn(
                   "group rounded-lg px-2 transition-colors hover:bg-muted/55",
                   variantStyles.item,
@@ -149,7 +152,7 @@ export function EpisodeList({
                     <ContentMetadata items={metadataItems} />
                     {progress?.isCompleted ? (
                       <CircleCheck
-                        aria-label="Listened"
+                        aria-label={t("Listened")}
                         className="size-3.5 shrink-0 text-muted-foreground"
                       />
                     ) : null}

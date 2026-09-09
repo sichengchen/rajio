@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import {
@@ -51,10 +53,10 @@ const resultRenderLimit = 75;
 const emptyPodcastResults: RankedPodcast[] = [];
 const emptyEpisodeResults: Episode[] = [];
 
-const filters: Array<{ label: string; value: SearchFilter }> = [
-  { label: "Top Results", value: "top" },
-  { label: "Podcasts", value: "podcasts" },
-  { label: "Episodes", value: "episodes" },
+const filters = (): Array<{ label: string; value: SearchFilter }> => [
+  { label: t("Top Results"), value: "top" },
+  { label: t("Podcasts"), value: "podcasts" },
+  { label: t("Episodes"), value: "episodes" },
 ];
 
 function normalizeSearchText(value: string | null | undefined) {
@@ -186,6 +188,7 @@ function EmptyState({
   icon?: ReactNode;
   title: string;
 }) {
+  useLocale();
   return (
     <div className="flex min-h-[280px] items-center justify-center px-4 py-12">
       <div className="max-w-sm text-center text-muted-foreground">
@@ -208,15 +211,16 @@ function TruncatedResultsNote({
   shownCount: number;
   totalCount: number;
 }) {
+  useLocale();
   return (
     <p className="px-4 py-3 text-xs text-muted-foreground">
-      Showing first {shownCount} of {hasMore ? `${totalCount}+` : totalCount} results. Narrow your
-      search to see more.
+      {t("Showing {shown} of {total} results. Narrow your search to see more.", { shown: shownCount, total: hasMore ? `${totalCount}+` : totalCount })}
     </p>
   );
 }
 
 export function SearchPage() {
+  useLocale();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [submittedQueries, setSubmittedQueries] = useState<Record<SearchSource, string>>({
@@ -416,7 +420,7 @@ export function SearchPage() {
       if (discoverRequestId.current === requestId) {
         setDiscoverResults([]);
       }
-      toast.error(error instanceof Error ? error.message : "Failed to search Discover");
+      toast.error(error instanceof Error ? error.message : t("Failed to search Discover"));
       console.error("Discover search error:", error);
     } finally {
       if (discoverRequestId.current === requestId) {
@@ -438,7 +442,7 @@ export function SearchPage() {
 
   const handleSubscribe = async (podcast: iTunesPodcast) => {
     if (!podcast.feedUrl) {
-      toast.error("This podcast does not have a valid RSS feed URL");
+      toast.error(t("This podcast does not have a valid RSS feed URL"));
       return;
     }
 
@@ -446,9 +450,9 @@ export function SearchPage() {
 
     try {
       await subscribeToPodcast(podcast.feedUrl);
-      toast.success(`Subscribed to ${podcast.title}`);
+      toast.success(t("Subscribed to {name}", { name: podcast.title }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to subscribe to podcast");
+      toast.error(error instanceof Error ? error.message : t("Failed to subscribe to podcast"));
       console.error("Subscribe error:", error);
     } finally {
       setSubscribingFeedUrl(null);
@@ -473,33 +477,33 @@ export function SearchPage() {
 
   const renderDiscoverContent = (filter: SearchFilter) => {
     if (!currentTerm) {
-      return <EmptyState title="Search Discover" />;
+      return <EmptyState title={t("Search Discover")} />;
     }
 
     if (isDiscoverLoading) {
       return (
         <EmptyState
           icon={<Loader2 className="h-8 w-8 animate-spin" />}
-          title="Searching Discover"
+          title={t("Searching Discover")}
         />
       );
     }
 
     if (!hasCurrentDiscoverResults) {
-      return <EmptyState title="Search Discover" />;
+      return <EmptyState title={t("Search Discover")} />;
     }
 
     if (filter === "episodes") {
       return (
         <EmptyState
           icon={<CircleOff className="h-8 w-8" />}
-          title="No Discover episodes"
+          title={t("No Discover episodes")}
         />
       );
     }
 
     if (filteredDiscoverResults.length === 0) {
-      return <EmptyState title="No new podcasts found" />;
+      return <EmptyState title={t("No new podcasts found")} />;
     }
 
     const visibleDiscoverResults = filteredDiscoverResults.slice(0, resultRenderLimit);
@@ -508,7 +512,7 @@ export function SearchPage() {
       <>
         <PodcastList
           getDescription={(podcast) =>
-            [podcast.author, podcast.genre].filter(Boolean).join(" · ") || "Discover"
+            [podcast.author, podcast.genre].filter(Boolean).join(" · ") || t("Discover")
           }
           getKey={(podcast) => `${podcast.id}-${podcast.feedUrl}`}
           onOpen={handleOpenDiscoverPodcast}
@@ -517,7 +521,7 @@ export function SearchPage() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  aria-label={`Subscribe to ${podcast.title}`}
+                  aria-label={t("Subscribe to {name}", { name: podcast.title })}
                   disabled={subscribingFeedUrl === podcast.feedUrl}
                   onClick={() => void handleSubscribe(podcast)}
                   size="icon"
@@ -547,7 +551,7 @@ export function SearchPage() {
 
   const renderLibraryContent = (filter: SearchFilter) => {
     if (!currentTerm) {
-      return <EmptyState title="Search your library" />;
+      return <EmptyState title={t("Search your library")} />;
     }
 
     const tabResultCount = getResultCount(filter);
@@ -556,13 +560,13 @@ export function SearchPage() {
       return (
         <EmptyState
           icon={<Loader2 className="h-8 w-8 animate-spin" />}
-          title="Searching your library"
+          title={t("Searching your library")}
         />
       );
     }
 
     if (tabResultCount === 0) {
-      return <EmptyState title="No library matches" />;
+      return <EmptyState title={t("No library matches")} />;
     }
 
     const visiblePodcasts =
@@ -587,7 +591,7 @@ export function SearchPage() {
         {visiblePodcasts.length > 0 ? (
           <PodcastList
             getDescription={(podcast) =>
-              podcast.author || richTextToPlainText(podcast.description) || "Subscribed podcast"
+              podcast.author || richTextToPlainText(podcast.description) || t("Subscribed podcast")
             }
             onOpen={(podcast) => handleOpenPodcast(podcast.id)}
             podcasts={visiblePodcasts.map(({ podcast }) => podcast)}
@@ -636,12 +640,12 @@ export function SearchPage() {
                 autoFocus
                 className="h-10 bg-background pl-9 pr-10"
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={`Search in ${source === "discover" ? "Discover" : "Library"}`}
+                placeholder={t("Search in {source}", { source: source === "discover" ? t("Discover") : t("Library") })}
                 value={query}
               />
               {query ? (
                 <Button
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
                   onClick={handleClearQuery}
                   size="icon"
@@ -660,8 +664,8 @@ export function SearchPage() {
                 value={source}
               >
                 <TabsList className="max-w-full">
-                  <TabsTrigger value="discover">Discover</TabsTrigger>
-                  <TabsTrigger value="library">Library</TabsTrigger>
+                  <TabsTrigger value="discover">{t("Discover")}</TabsTrigger>
+                  <TabsTrigger value="library">{t("Library")}</TabsTrigger>
                 </TabsList>
               </Tabs>
             ) : null}
@@ -669,7 +673,7 @@ export function SearchPage() {
 
           {shouldShowFilters ? (
             <TabsList className="grid w-fit grid-cols-3 self-start">
-              {filters.map((filter) => (
+              {filters().map((filter) => (
                 <TabsTrigger key={filter.value} value={filter.value}>
                   {filter.label}
                 </TabsTrigger>
@@ -684,13 +688,13 @@ export function SearchPage() {
               <div className="mb-2 px-4 text-xs font-medium text-muted-foreground">
                 {source === "discover"
                   ? isDiscoverLoading
-                    ? "Searching Discover"
-                    : `${activeResultCount} result${activeResultCount === 1 ? "" : "s"} in Discover`
-                  : `${activeResultCount} result${activeResultCount === 1 ? "" : "s"} in Library`}
+                    ? t("Searching Discover")
+                    : t("Results in {source}: {count}", { source: t("Discover"), count: activeResultCount })
+                  : t("Results in {source}: {count}", { source: t("Library"), count: activeResultCount })}
               </div>
             ) : null}
 
-            {filters.map((filter) => (
+            {filters().map((filter) => (
               <TabsContent className="mt-0 min-w-0" key={filter.value} value={filter.value}>
                 {filter.value === activeFilter ? renderResultsContent(filter.value) : null}
               </TabsContent>

@@ -1,3 +1,5 @@
+import { t } from "../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 import type { ReactNode } from "react";
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -25,26 +27,26 @@ interface AppPageLayoutProps {
   toolBar?: ToolbarAction[];
 }
 
-const mobileTabItems: MobileTabBarItem[] = [
+const mobileTabItems = (): MobileTabBarItem[] => [
   {
     id: "search",
     icon: Search,
-    label: "Search",
+    label: t("Search"),
   },
   {
     id: "whats-new",
     icon: Sparkles,
-    label: "What's New",
+    label: t("What's New"),
   },
   {
     id: "library",
     icon: Radio,
-    label: "Library",
+    label: t("Library"),
   },
   {
     id: "settings",
     icon: Settings,
-    label: "Settings",
+    label: t("Settings"),
   },
 ];
 
@@ -71,6 +73,7 @@ function getActiveTab(pathname: string) {
 }
 
 export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayoutProps) {
+  useLocale();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,7 +90,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
             <BackNavigation
               className="-ml-2"
               iconOnly
-              label="Back"
+              label={t("Back")}
               onClick={() => navigate({ to: backTo })}
             />
           ) : null}
@@ -140,7 +143,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
       {isMobile ? (
         <MobileTabBar
           activeTab={getActiveTab(location.pathname)}
-          items={mobileTabItems}
+          items={mobileTabItems()}
           onTabChange={(tabId) => {
             if (tabId === "search") {
               navigate({ to: "/search" });
@@ -169,6 +172,7 @@ export function AppPageLayout({ backTo, children, title, toolBar }: AppPageLayou
 }
 
 export function RequireSubscriptions({ children }: { children: ReactNode }) {
+  useLocale();
   const podcasts = usePodcastStore((state) => state.podcasts);
 
   if (podcasts.length === 0) {

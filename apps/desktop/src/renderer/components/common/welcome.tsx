@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useRef } from "react";
@@ -7,6 +9,7 @@ import { usePodcastStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export function WelcomeScreen() {
+  useLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { importFromOPML, progressDialog, setShowAddPodcastDialog } = usePodcastStore();
@@ -24,19 +27,19 @@ export function WelcomeScreen() {
       const result = await importFromOPML(text);
 
       if (result.imported > 0) {
-        toast.success(`Successfully imported ${result.imported} podcast(s)!`);
+        toast.success(t("Imported podcasts: {count}", { count: result.imported }));
         if (result.errors > 0) {
           toast.warning(
-            `${result.errors} podcast(s) could not be imported. The feed may be unavailable or require access.`,
+            t("Feeds unavailable or requiring access: {count}", { count: result.errors }),
           );
         }
       } else {
-        toast.error("No podcasts were imported. Please check the OPML file format.");
+        toast.error(t("No podcasts were imported. Please check the OPML file format."));
       }
     } catch (error) {
       console.error("OPML import error:", error);
       toast.error(
-        `Failed to import OPML file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        t("Failed to import OPML file: {error}", { error: error instanceof Error ? error.message : t("Unknown error") }),
       );
     }
 
@@ -53,24 +56,16 @@ export function WelcomeScreen() {
           <div className="flex size-14 items-center justify-center rounded-xl bg-muted">
             <Radio className="size-7 text-foreground" />
           </div>
-          <h1 id="welcome-title" className="text-2xl font-semibold tracking-tight">
-            Welcome to Rajio
-          </h1>
+          <h1 id="welcome-title" className="text-2xl font-semibold tracking-tight">{t("Welcome to Rajio")}</h1>
         </header>
         <div className="flex flex-col gap-4 text-center">
-          <p className="text-muted-foreground text-sm">
-            Rajio is a podcast player. Get started by adding your first podcast.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("Rajio is a podcast player. Get started by adding your first podcast.")}</p>
 
           <div className="flex flex-col gap-2">
             <Button className="w-full" size="default" onClick={() => setShowAddPodcastDialog(true)}>
-              <Plus data-icon="inline-start" />
-              Add Podcast
-            </Button>
+              <Plus data-icon="inline-start" />{t("Add Podcast")}</Button>
 
-            <p className="text-sm text-muted-foreground mt-2">
-              Or import your subscriptions from an OPML file
-            </p>
+            <p className="text-sm text-muted-foreground mt-2">{t("Or import your subscriptions from an OPML file")}</p>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -82,7 +77,7 @@ export function WelcomeScreen() {
               disabled={progressDialog.isOpen}
             >
               <Import data-icon="inline-start" />
-              {progressDialog.isOpen ? "Importing..." : "Import OPML"}
+              {progressDialog.isOpen ? t("Importing...") : t("Import OPML")}
             </Button>
           </div>
 

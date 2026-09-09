@@ -1,3 +1,5 @@
+import { setLanguage, subscribeLocale } from "../shared/i18n";
+import { t } from "../shared/i18n";
 import { ipcChannels } from "../shared/ipc";
 import {
   app,
@@ -150,6 +152,7 @@ void app
     }
 
     const db = createLocalDatabase(app.getPath("userData"));
+    setLanguage(db.getSettings().language, app.getLocale());
     const imageCache = registerImageCacheProtocol(
       path.join(app.getPath("userData"), "image-cache-v1"),
     );
@@ -177,25 +180,27 @@ void app
     if (process.platform !== "darwin") {
       tray = new Tray(appIcon);
       tray.setToolTip("Rajio");
-      tray.setContextMenu(
+      const updateTrayMenu = () => tray?.setContextMenu(
         Menu.buildFromTemplate([
           {
-            label: "Open Rajio",
+            label: t("Open Rajio"),
             click: () => {
               mainWindow.show();
               mainWindow.focus();
             },
           },
-          { role: "quit", label: "Quit Rajio" },
+          { role: "quit", label: t("Quit Rajio") },
         ]),
       );
+      updateTrayMenu();
+      subscribeLocale(updateTrayMenu);
       tray.on("click", () => {
         mainWindow.show();
         mainWindow.focus();
       });
     }
     const refreshLibrary = () => {
-      void refresh.run().catch((error) => console.error("Refresh failed", error));
+      void refresh.run().catch((error) => console.error(t("Refresh failed"), error));
     };
     const refreshTimer = setInterval(refreshLibrary, 15 * 60_000);
     refreshTimer.unref();

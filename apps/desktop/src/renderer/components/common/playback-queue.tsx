@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useState, type DragEvent } from "react";
@@ -25,6 +27,7 @@ interface QueueDropTarget {
 }
 
 export function PlaybackQueue() {
+  useLocale();
   const playbackQueue = usePodcastStore((state) => state.playbackQueue);
   const clearQueue = usePodcastStore((state) => state.clearQueue);
   const playQueuedEpisode = usePodcastStore((state) => state.playQueuedEpisode);
@@ -58,18 +61,18 @@ export function PlaybackQueue() {
         actions={
           hasQueuedEpisodes ? (
             <Button
-              aria-label="Clear play queue"
+              aria-label={t("Clear play queue")}
               className="size-8 text-muted-foreground"
               onClick={clearQueue}
               size="icon"
-              title="Clear play queue"
+              title={t("Clear play queue")}
               variant="ghost"
             >
               <ListX className="translate-x-px" />
             </Button>
           ) : null
         }
-        title="Play Queue"
+        title={t("Play Queue")}
       />
 
       {playbackQueue.length > 0 ? (
@@ -81,7 +84,7 @@ export function PlaybackQueue() {
               return (
                 <ListItem
                   aria-current={isCurrentEpisode ? "true" : undefined}
-                  aria-label={`Play ${episode.title}`}
+                  aria-label={t("Play {name}", { name: episode.title })}
                   className={cn(
                     "rounded-md px-2 py-2.5 after:left-[3.75rem] after:right-2 hover:bg-muted/55",
                     !isCurrentEpisode && "cursor-grab active:cursor-grabbing",
@@ -127,11 +130,11 @@ export function PlaybackQueue() {
                   {isCurrentEpisode ? null : (
                     <ListItemActions className="ml-auto min-w-8 justify-end">
                       <Button
-                        aria-label={`Remove ${episode.title} from play queue`}
+                        aria-label={t("Remove {name} from play queue", { name: episode.title })}
                         className="size-8 text-muted-foreground"
                         onClick={() => removeFromQueue(episode.id)}
                         size="icon"
-                        title="Remove from play queue"
+                        title={t("Remove from play queue")}
                         variant="ghost"
                       >
                         <X data-icon="inline-start" />
@@ -146,10 +149,8 @@ export function PlaybackQueue() {
       ) : (
         <div className="flex flex-1 items-center justify-center px-6 text-center">
           <div className="max-w-56">
-            <p className="text-sm font-medium">Your queue is empty</p>
-            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-              Play an episode or choose Play Next to add it here.
-            </p>
+            <p className="text-sm font-medium">{t("Your queue is empty")}</p>
+            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{t("Play an episode or choose Play Next to add it here.")}</p>
           </div>
         </div>
       )}

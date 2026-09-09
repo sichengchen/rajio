@@ -1,3 +1,5 @@
+import { t } from "../../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
@@ -8,6 +10,7 @@ import { Download } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 function LibraryContent() {
+  useLocale();
   const navigate = useNavigate();
   const podcasts = usePodcastStore((state) => state.podcasts);
   const isMobile = useIsMobile();
@@ -30,7 +33,7 @@ function LibraryContent() {
             onClick={() => navigate({ to: "/downloaded" })}
           >
             <Download className="h-5 w-5" />
-            <span>Downloaded</span>
+            <span>{t("Downloaded")}</span>
           </Button>
         </div>
       )}
@@ -39,10 +42,8 @@ function LibraryContent() {
       <div className="px-2">
         {podcasts.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No podcasts in your library yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add podcasts to start building your collection
-            </p>
+            <p className="text-muted-foreground">{t("No podcasts in your library yet")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("Add podcasts to start building your collection")}</p>
           </div>
         ) : (
           <GridLayout columns={2} gap={4}>
@@ -52,7 +53,7 @@ function LibraryContent() {
                 title={podcast.title}
                 subtitle={podcast.author}
                 imageUrl={podcast.imageUrl}
-                imageAlt={`${podcast.title} cover`}
+                imageAlt={t("{name} cover", { name: podcast.title })}
                 onClick={() => handlePodcastClick(podcast.id)}
                 className="w-full"
               />
@@ -65,5 +66,6 @@ function LibraryContent() {
 }
 
 export function LibraryPage() {
+  useLocale();
   return <LibraryContent />;
 }

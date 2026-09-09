@@ -1,3 +1,5 @@
+import { t } from "../../../shared/i18n";
+import { useLocale } from "@/lib/locale";
 "use client";
 
 import { desktopApi } from "@/desktop-api";
@@ -22,6 +24,7 @@ import { formatTime } from "@/lib/utils";
 import { ShowNotes } from "./show-notes";
 
 export function AudioPlayer() {
+  useLocale();
   const audioRef = useRef<HTMLAudioElement>(null);
   const isPlayingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
@@ -484,7 +487,7 @@ export function AudioPlayer() {
             </DrawerTrigger>
             <DrawerContent className="h-[85vh]">
               <DrawerHeader className="flex-shrink-0">
-                <DrawerTitle>Show Notes</DrawerTitle>
+                <DrawerTitle>{t("Show Notes")}</DrawerTitle>
               </DrawerHeader>
               <div className="flex-1 overflow-y-auto">
                 <ShowNotes />
@@ -548,7 +551,7 @@ export function AudioPlayer() {
             </Button>
 
             <Button
-              aria-label={queueOpen ? "Hide Play Queue" : "Show Play Queue"}
+              aria-label={queueOpen ? t("Hide Play Queue") : t("Show Play Queue")}
               aria-pressed={queueOpen}
               className={queueOpen ? "h-9 w-9 bg-muted" : "h-9 w-9"}
               onClick={toggleQueue}
@@ -566,7 +569,7 @@ export function AudioPlayer() {
           <button
             onClick={handleCoverClick}
             className="flex-shrink-0 rounded-lg transition-transform hover:scale-105"
-            title="Open episode details"
+            title={t("Open episode details")}
           >
             <CoverImage src={currentEpisode.imageUrl} alt={currentEpisode.title} size="md" />
           </button>
@@ -654,7 +657,7 @@ export function AudioPlayer() {
             {/* Queue and Show Notes */}
             <div className="flex items-center gap-2">
               <Button
-                aria-label={queueOpen ? "Hide Play Queue" : "Show Play Queue"}
+                aria-label={queueOpen ? t("Hide Play Queue") : t("Show Play Queue")}
                 aria-pressed={queueOpen}
                 className={
                   queueOpen ? "bg-muted text-foreground hover:bg-muted" : "text-muted-foreground"
@@ -667,7 +670,7 @@ export function AudioPlayer() {
               </Button>
 
               <Button
-                aria-label={showNotesOpen ? "Hide show notes" : "Show show notes"}
+                aria-label={showNotesOpen ? t("Hide show notes") : t("Show show notes")}
                 aria-pressed={showNotesOpen}
                 size="icon"
                 variant="ghost"
