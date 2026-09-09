@@ -43,7 +43,7 @@ final class LocalizationAcceptanceTests: XCTestCase {
     app.buttons["Français"].tap()
     XCTAssertTrue(app.navigationBars["Réglages"].waitForExistence(timeout: 5))
     app.buttons["Terminé"].tap()
-    XCTAssertTrue(app.navigationBars["Bibliothèque"].waitForExistence(timeout: 5))
+    XCTAssertTrue(app.navigationBars["Bibliothèque"].waitForExistence(timeout: 5), app.debugDescription)
     app.terminate()
     app.launch()
     XCTAssertTrue(app.navigationBars["Bibliothèque"].waitForExistence(timeout: 10))

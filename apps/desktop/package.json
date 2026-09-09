@@ -29,6 +29,10 @@
       {
         "from": "resources/icon.png",
         "to": "icon.png"
+      },
+      {
+        "from": "resources/Assets.car",
+        "to": "Assets.car"
       }
     ],
     "files": [
@@ -41,7 +45,7 @@
       "entitlements": "resources/entitlements.mac.plist",
       "entitlementsInherit": "resources/entitlements.mac.inherit.plist",
       "hardenedRuntime": true,
-      "icon": "resources/icon.png",
+      "icon": "resources/Rajio.icns",
       "notarize": true,
       "x64ArchFiles": "**/node_modules/better-sqlite3/prebuilds/*.node",
       "target": [
@@ -51,7 +55,10 @@
           ],
           "target": "dmg"
         }
-      ]
+      ],
+      "extendInfo": {
+        "CFBundleIconName": "Rajio"
+      }
     },
     "win": {
       "icon": "resources/icon.png"

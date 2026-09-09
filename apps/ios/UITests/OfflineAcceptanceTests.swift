@@ -30,6 +30,7 @@ final class OfflineAcceptanceTests: XCTestCase {
     XCTAssertTrue(download.waitForExistence(timeout: 5))
     download.tap()
     XCTAssertTrue(app.buttons["Remove Download"].waitForExistence(timeout: 40))
+    capture("episode-downloaded")
     setSource(online: false)
     app.buttons["Play"].firstMatch.tap()
     let mini = app.buttons["mini-player"]
@@ -45,6 +46,7 @@ final class OfflineAcceptanceTests: XCTestCase {
     let advanced = NSPredicate(format: "label BEGINSWITH %@", "0:00:3")
     expectation(for: advanced, evaluatedWith: elapsed)
     waitForExpectations(timeout: 10)
+    capture("now-playing-offline")
     let saved = elapsed.label
     app.terminate()
     app.launch()
@@ -67,6 +69,30 @@ final class OfflineAcceptanceTests: XCTestCase {
     XCTAssertTrue(app.buttons["Download"].waitForExistence(timeout: 5))
     app.buttons["Download"].tap()
     XCTAssertTrue(app.buttons["Retry Download"].waitForExistence(timeout: 40))
+  }
+
+  func testTabsAndLibraryCollections() {
+    subscribe()
+    app.tabBars.buttons["Home"].tap()
+    XCTAssertTrue(app.navigationBars["Home"].waitForExistence(timeout: 5))
+    capture("home")
+    app.tabBars.buttons["Search"].tap()
+    XCTAssertTrue(app.navigationBars["Search"].waitForExistence(timeout: 5))
+    capture("search")
+    app.tabBars.buttons["Library"].tap()
+    app.buttons["Favorites"].tap()
+    XCTAssertTrue(app.navigationBars["Favorites"].waitForExistence(timeout: 5))
+    app.navigationBars.buttons.element(boundBy: 0).tap()
+    app.buttons["Queue"].tap()
+    XCTAssertTrue(app.navigationBars["Queue"].waitForExistence(timeout: 5))
+    capture("queue-empty")
+  }
+
+  private func capture(_ name: String) {
+    let attachment = XCTAttachment(screenshot: app.screenshot())
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
   }
 
   private func subscribe() {

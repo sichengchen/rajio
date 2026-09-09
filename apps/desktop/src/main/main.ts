@@ -144,7 +144,7 @@ app.on("second-instance", () => {
 void app
   .whenReady()
   .then(() => {
-    if (process.platform === "darwin" && app.dock && !appIcon.isEmpty()) {
+    if (process.platform === "darwin" && !app.isPackaged && app.dock && !appIcon.isEmpty()) {
       app.dock.setIcon(appIcon);
     }
 
