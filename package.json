@@ -13,7 +13,8 @@
     "cf:deploy": "bash ./scripts/deploy-cloudflare.sh",
     "mobile:start": "pnpm --filter @rajio-app/mobile start",
     "mobile:ios": "pnpm --filter @rajio-app/mobile ios",
-    "mobile:android": "pnpm --filter @rajio-app/mobile android"
+    "mobile:android": "pnpm --filter @rajio-app/mobile android",
+    "setup:desktop": "bash scripts/setup-desktop.sh"
   },
   "devDependencies": {
     "vite-plus": "^0.1.16"

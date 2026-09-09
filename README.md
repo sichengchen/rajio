@@ -24,6 +24,12 @@ An open-source podcast player for desktop and iOS. Each client stores its librar
 
 ## Desktop App (`apps/desktop`)
 
+Install the pinned Rust/Wasm tools once (stored in the ignored `.tools` directory):
+
+```bash
+pnpm setup:desktop
+```
+
 Local development:
 
 ```bash

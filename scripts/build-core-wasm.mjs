@@ -3,16 +3,18 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
+import { rustEnvironment } from "./rust-environment.mjs";
+const env = rustEnvironment();
 const root = fileURLToPath(new URL("../", import.meta.url));
 const expectedVersion = "0.2.100";
-const version = spawnSync("wasm-bindgen", ["--version"], { encoding: "utf8" });
+const version = spawnSync("wasm-bindgen", ["--version"], { encoding: "utf8", env });
 if (version.status !== 0 || version.stdout.trim() !== `wasm-bindgen ${expectedVersion}`) {
   throw new Error(
-    `Install wasm-bindgen-cli ${expectedVersion}: cargo install wasm-bindgen-cli --version ${expectedVersion} --locked`,
+    `Desktop Rust tools are missing or incompatible. Run pnpm setup:desktop (requires curl and a C compiler), then retry. Expected wasm-bindgen ${expectedVersion}.`,
   );
 }
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
+  const result = spawnSync(command, args, { cwd: root, stdio: "inherit", env });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
