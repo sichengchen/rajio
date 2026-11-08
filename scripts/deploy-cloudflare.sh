@@ -216,8 +216,6 @@ else
   realtime_secret="$(generate_realtime_secret)"
 fi
 
-server_url="https://${server_worker_name}.workers.dev"
-
 write_state_file \
   "$server_worker_name" \
   "$d1_database_name" \
@@ -280,10 +278,31 @@ log_step "Applying remote D1 migrations"
 )
 
 log_step "Deploying the server Worker"
+deploy_output="$(mktemp)"
+trap 'rm -f "$deploy_output"' EXIT
 (
   cd "$SERVER_DIR" &&
-    "$WRANGLER_BIN" deploy --config "$SERVER_DEPLOY_CONFIG"
+    WRANGLER_OUTPUT_FILE_PATH="$deploy_output" "$WRANGLER_BIN" deploy --config "$SERVER_DEPLOY_CONFIG"
 )
+
+server_url="$(node --input-type=module - "$deploy_output" "$server_worker_name" <<'NODE'
+import { readFileSync } from "node:fs";
+
+const [outputPath, workerName] = process.argv.slice(2);
+const deployment = readFileSync(outputPath, "utf8")
+  .split("\n")
+  .filter(Boolean)
+  .map((line) => JSON.parse(line))
+  .find((entry) => entry.type === "deploy" && entry.worker_name === workerName);
+const endpoint = deployment?.targets?.find((target) =>
+  /^https:\/\/[^./]+\.[^./]+\.workers\.dev$/.test(target),
+);
+if (!endpoint) {
+  process.exit(1);
+}
+process.stdout.write(endpoint);
+NODE
+)" || fail "The Worker deployed, but Wrangler did not report a workers.dev endpoint. Check the deploy output above."
 
 cat <<EOF
 
