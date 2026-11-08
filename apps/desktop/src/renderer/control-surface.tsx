@@ -111,11 +111,11 @@ function Player() {
           min={0}
           max={state.duration || 1}
           step={1}
-          value={[seeking ?? state.position]}
+          value={seeking ?? state.position}
           disabled={!state.episodeId || !state.duration}
-          onValueChange={(v) => setSeeking(v[0])}
-          onValueCommit={(v) => {
-            send("seek", v[0]);
+          onValueChange={setSeeking}
+          onValueCommitted={(value) => {
+            send("seek", value);
             setSeeking(null);
           }}
         />

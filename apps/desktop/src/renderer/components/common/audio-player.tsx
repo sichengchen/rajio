@@ -433,8 +433,7 @@ export function AudioPlayer() {
     }
   };
 
-  const handleProgressChange = (value: number[]) => {
-    const newTime = value[0];
+  const handleProgressChange = (newTime: number) => {
     setCurrentTime(newTime);
     if (audioRef.current) {
       audioRef.current.currentTime = newTime;
@@ -446,8 +445,8 @@ export function AudioPlayer() {
     }
   };
 
-  const handleVolumeChange = (value: number[]) => {
-    setVolume(value[0]);
+  const handleVolumeChange = (value: number) => {
+    setVolume(value);
   };
 
   const handleCoverClick = () => {
@@ -480,11 +479,13 @@ export function AudioPlayer() {
         <div className="flex items-center gap-3 p-4">
           {/* Left: Episode cover (clickable for show notes) */}
           <Drawer>
-            <DrawerTrigger asChild>
-              <button className="flex-shrink-0 rounded-lg transition-transform hover:scale-105">
-                <CoverImage src={currentEpisode.imageUrl} alt={currentEpisode.title} size="md" />
-              </button>
-            </DrawerTrigger>
+            <DrawerTrigger
+              render={
+                <button className="flex-shrink-0 rounded-lg transition-transform hover:scale-105">
+                  <CoverImage src={currentEpisode.imageUrl} alt={currentEpisode.title} size="md" />
+                </button>
+              }
+            />
             <DrawerContent className="h-[85vh]">
               <DrawerHeader className="flex-shrink-0">
                 <DrawerTitle>{t("Show Notes")}</DrawerTitle>
@@ -634,11 +635,12 @@ export function AudioPlayer() {
               </span>
 
               <Slider
-                value={[currentTime]}
+                aria-label={t("Playback position")}
+                value={currentTime}
                 max={duration || 100}
                 step={1}
                 onValueChange={handleProgressChange}
-                className="flex-1 max-w-md [&>[data-slot=slider-track]]:bg-foreground/20 [&>[data-slot=slider-range]]:bg-primary [&>[data-slot=slider-thumb]]:bg-primary [&>[data-slot=slider-thumb]]:border-primary [&>[data-slot=slider-thumb]]:shadow-lg"
+                className="flex-1 max-w-md [&_[data-slot=slider-track]]:bg-foreground/20 [&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-thumb]]:shadow-lg"
               />
 
               <span className="text-xs text-muted-foreground w-12">{formatTime(duration)}</span>
@@ -650,11 +652,12 @@ export function AudioPlayer() {
             <div className="flex w-32 items-center gap-2">
               <Volume2 className="h-4 w-4 text-muted-foreground" />
               <Slider
-                value={[volume]}
+                aria-label={t("Volume")}
+                value={volume}
                 max={1}
                 step={0.01}
                 onValueChange={handleVolumeChange}
-                className="flex-1 [&>[data-slot=slider-track]]:bg-foreground/20 [&>[data-slot=slider-range]]:bg-primary [&>[data-slot=slider-thumb]]:bg-primary [&>[data-slot=slider-thumb]]:border-primary [&>[data-slot=slider-thumb]]:shadow-lg"
+                className="flex-1 [&_[data-slot=slider-track]]:bg-foreground/20 [&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary [&_[data-slot=slider-thumb]]:shadow-lg"
               />
             </div>
 

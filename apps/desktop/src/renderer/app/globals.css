@@ -147,7 +147,6 @@
   select,
   a,
   [role="button"],
-  [data-radix-popper-content-wrapper],
   .app-no-drag {
     -webkit-app-region: no-drag;
   }

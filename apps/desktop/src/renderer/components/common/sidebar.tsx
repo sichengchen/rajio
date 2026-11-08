@@ -1,6 +1,6 @@
 import { t } from "../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -117,7 +117,9 @@ export function PodcastSidebar() {
           {/* Fixed sections */}
           <div className="flex-shrink-0">
             <div className="relative flex w-full min-w-0 flex-col p-2">
-              <div className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium">{t("Menu")}</div>
+              <div className="text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium">
+                {t("Menu")}
+              </div>
               <div className="w-full text-sm">
                 <ul className="flex w-full min-w-0 flex-col gap-1">
                   {menuItems().map((item) => {
@@ -159,7 +161,9 @@ export function PodcastSidebar() {
             <div className="relative flex w-full min-w-0 flex-col p-2">
               <div className="flex items-center justify-between h-8 px-2 min-w-0">
                 <div className="text-sidebar-foreground/70 ring-sidebar-ring p-0 flex-1 min-w-0 text-xs font-medium">
-                  <span className="truncate">{t("Podcasts ({count})", { count: podcasts.length })}</span>
+                  <span className="truncate">
+                    {t("Podcasts ({count})", { count: podcasts.length })}
+                  </span>
                 </div>
                 <div className="-mr-2.5 flex flex-shrink-0 gap-1">
                   <Button
@@ -235,7 +239,10 @@ export function PodcastSidebar() {
                                 className="w-8 h-8 flex-shrink-0"
                               />
                               <div className="flex-1 min-w-0 text-left overflow-hidden">
-                                <div className="font-medium text-sm truncate leading-tight">
+                                <div
+                                  className="font-medium text-sm truncate leading-tight"
+                                  title={podcast.title}
+                                >
                                   {podcast.title}
                                 </div>
                                 {podcast.author && (

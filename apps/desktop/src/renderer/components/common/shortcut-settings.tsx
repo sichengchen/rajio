@@ -21,21 +21,19 @@ import {
 
 function keyLabels(value: string) {
   const mac = /Mac/.test(navigator.platform);
-  return value
-    .split("+")
-    .map(
-      (key) =>
-        ({
-          CommandOrControl: mac ? "⌘" : "Ctrl",
-          Shift: "⇧",
-          Alt: mac ? "⌥" : "Alt",
-          Left: "←",
-          Right: "→",
-          Up: "↑",
-          Down: "↓",
-          Space: "Space",
-        })[key] ?? key,
-    );
+  return value.split("+").map(
+    (key) =>
+      ({
+        CommandOrControl: mac ? "⌘" : "Ctrl",
+        Shift: "⇧",
+        Alt: mac ? "⌥" : "Alt",
+        Left: "←",
+        Right: "→",
+        Up: "↑",
+        Down: "↓",
+        Space: "Space",
+      })[key] ?? key,
+  );
 }
 export function ShortcutSettings() {
   const [bindings, setBindings] = useState(defaultShortcuts);
@@ -116,6 +114,10 @@ export function ShortcutSettings() {
               )}
             </Button>
             <Select
+              items={[
+                { value: "app", label: t("In Rajio") },
+                { value: "global", label: t("Global") },
+              ]}
               value={bindings[action].global ? "global" : "app"}
               disabled={saving}
               onValueChange={(value) =>

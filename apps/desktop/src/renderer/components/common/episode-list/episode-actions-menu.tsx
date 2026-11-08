@@ -1,14 +1,13 @@
 import { t } from "../../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { CircleCheck, Download, Ellipsis, Heart, ListPlus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -51,7 +50,7 @@ interface EpisodeActionsMenuProps extends EpisodeActionProps {
 }
 
 interface EpisodeActionsContextMenuProps extends EpisodeActionProps {
-  children: ReactNode;
+  children: ReactElement;
 }
 
 function useEpisodeActions({ episode, onDeleteComplete, onDownloadComplete }: EpisodeActionProps) {
@@ -149,25 +148,32 @@ function EpisodeMenuItems({
   return (
     <>
       <Group>
-        <Item disabled={currentEpisodeId === episode.id} onSelect={actions.handlePlayNext}>
-          <ListPlus />{t("Play Next")}</Item>
-        <Item onSelect={actions.toggleFavoriteEpisode}>
+        <Item disabled={currentEpisodeId === episode.id} onClick={actions.handlePlayNext}>
+          <ListPlus />
+          {t("Play Next")}
+        </Item>
+        <Item onClick={actions.toggleFavoriteEpisode}>
           <Heart className={actions.isFavorite ? "fill-current" : undefined} />
           {actions.isFavorite ? t("Remove from Favorites") : t("Save to Favorites")}
         </Item>
         <CheckboxItem
+          closeOnClick
           checked={actions.isListened}
           onCheckedChange={(checked) => void actions.handleListenedChange(checked)}
         >
-          <CircleCheck />{t("Listened")}</CheckboxItem>
+          <CircleCheck />
+          {t("Listened")}
+        </CheckboxItem>
       </Group>
       <Separator />
       <Group>
         {actions.isDownloaded ? (
-          <Item onSelect={() => actions.setRemoveDialogOpen(true)}>
-            <Trash2 />{t("Remove Download")}</Item>
+          <Item onClick={() => actions.setRemoveDialogOpen(true)}>
+            <Trash2 />
+            {t("Remove Download")}
+          </Item>
         ) : (
-          <Item disabled={actions.isDownloading} onSelect={() => void actions.handleDownload()}>
+          <Item disabled={actions.isDownloading} onClick={() => void actions.handleDownload()}>
             {actions.downloadFailed ? <RotateCcw /> : <Download />}
             {actions.isDownloading
               ? "Downloading…"
@@ -188,17 +194,18 @@ function RemoveDownloadDialog({ actions }: { actions: EpisodeActionsState }) {
       <AlertDialogContent onClick={(event) => event.stopPropagation()}>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("Remove this download?")}</AlertDialogTitle>
-          <AlertDialogDescription>{t("The episode will remain in your library and can be downloaded again later.")}</AlertDialogDescription>
+          <AlertDialogDescription>
+            {t("The episode will remain in your library and can be downloaded again later.")}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
-          <AlertDialogAction
+          <Button
             className="bg-destructive text-white hover:bg-destructive/90"
-            onClick={(event) => {
-              event.preventDefault();
-              void actions.handleRemoveDownload();
-            }}
-          >{t("Remove")}</AlertDialogAction>
+            onClick={() => void actions.handleRemoveDownload()}
+          >
+            {t("Remove")}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -219,18 +226,20 @@ export function EpisodeActionsMenu({
   return (
     <>
       <DropdownMenu onOpenChange={onOpenChange} open={open}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            aria-label={t("More actions for {name}", { name: episode.title })}
-            className="size-7 text-muted-foreground opacity-70 group-hover:opacity-100 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground data-[state=open]:opacity-100"
-            size="icon"
-            title={t("More actions for {name}", { name: episode.title })}
-            type="button"
-            variant="ghost"
-          >
-            <Ellipsis data-icon="inline-start" />
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              aria-label={t("More actions for {name}", { name: episode.title })}
+              className="size-7 text-muted-foreground opacity-70 group-hover:opacity-100 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-popup-open:opacity-100"
+              size="icon"
+              title={t("More actions for {name}", { name: episode.title })}
+              type="button"
+              variant="ghost"
+            >
+              <Ellipsis data-icon="inline-start" />
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-52">
           <EpisodeMenuItems
             actions={actions}
@@ -257,7 +266,7 @@ export function EpisodeActionsContextMenu({
   return (
     <>
       <ContextMenu>
-        <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+        <ContextMenuTrigger render={children} />
         <ContextMenuContent className="w-52">
           <EpisodeMenuItems
             actions={actions}

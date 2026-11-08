@@ -1,13 +1,12 @@
 import { t } from "../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 import { Ellipsis, RefreshCw, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -45,7 +44,7 @@ interface PodcastActionsMenuProps extends PodcastActionProps {
 }
 
 interface PodcastActionsContextMenuProps extends PodcastActionProps {
-  children: ReactNode;
+  children: ReactElement;
 }
 
 function PodcastActionItems({
@@ -58,20 +57,28 @@ function PodcastActionItems({
   if (context) {
     return (
       <ContextMenuGroup>
-        <ContextMenuItem disabled={isRefreshing} onSelect={onRefresh}>
-          <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />{t("Update show")}</ContextMenuItem>
-        <ContextMenuItem onSelect={onRequestRemove} variant="destructive">
-          <Trash2 />{t("Remove from library")}</ContextMenuItem>
+        <ContextMenuItem disabled={isRefreshing} onClick={onRefresh}>
+          <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
+          {t("Update show")}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onRequestRemove} variant="destructive">
+          <Trash2 />
+          {t("Remove from library")}
+        </ContextMenuItem>
       </ContextMenuGroup>
     );
   }
 
   return (
     <DropdownMenuGroup>
-      <DropdownMenuItem disabled={isRefreshing} onSelect={onRefresh}>
-        <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />{t("Update show")}</DropdownMenuItem>
-      <DropdownMenuItem onSelect={onRequestRemove} variant="destructive">
-        <Trash2 />{t("Remove from library")}</DropdownMenuItem>
+      <DropdownMenuItem disabled={isRefreshing} onClick={onRefresh}>
+        <RefreshCw className={isRefreshing ? "animate-spin" : undefined} />
+        {t("Update show")}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onRequestRemove} variant="destructive">
+        <Trash2 />
+        {t("Remove from library")}
+      </DropdownMenuItem>
     </DropdownMenuGroup>
   );
 }
@@ -87,17 +94,19 @@ export function PodcastActionsMenu({
   useLocale();
   return (
     <DropdownMenu onOpenChange={onOpenChange} open={open}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("More actions for {name}", { name: podcastTitle })}
-          className="mr-1 size-7 shrink-0 text-muted-foreground opacity-70 group-hover/menu-item:opacity-100 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[state=open]:opacity-100"
-          size="icon"
-          title={t("More actions for {name}", { name: podcastTitle })}
-          variant="ghost"
-        >
-          <Ellipsis data-icon="inline-start" />
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("More actions for {name}", { name: podcastTitle })}
+            className="mr-1 size-7 shrink-0 text-muted-foreground opacity-70 group-hover/menu-item:opacity-100 data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground data-popup-open:opacity-100"
+            size="icon"
+            title={t("More actions for {name}", { name: podcastTitle })}
+            variant="ghost"
+          >
+            <Ellipsis data-icon="inline-start" />
+          </Button>
+        }
+      />
       <DropdownMenuContent align="start" className="w-44" side="right" sideOffset={6}>
         <PodcastActionItems
           isRefreshing={isRefreshing}
@@ -118,7 +127,7 @@ export function PodcastActionsContextMenu({
   useLocale();
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuTrigger render={children} />
       <ContextMenuContent className="w-44">
         <PodcastActionItems
           context
@@ -151,21 +160,20 @@ export function RemovePodcastDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{t("Remove this show from your library?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t("Remove “{name}” and its downloaded episodes from this device?", { name: podcast?.title ?? "" })}
+            {t("Remove “{name}” and its downloaded episodes from this device?", {
+              name: podcast?.title ?? "",
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isRemoving}>{t("Cancel")}</AlertDialogCancel>
-          <AlertDialogAction
+          <Button
             className="bg-destructive text-white hover:bg-destructive/90"
             disabled={isRemoving}
-            onClick={(event) => {
-              event.preventDefault();
-              void onConfirm();
-            }}
+            onClick={() => void onConfirm()}
           >
             {isRemoving ? t("Removing...") : t("Remove")}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

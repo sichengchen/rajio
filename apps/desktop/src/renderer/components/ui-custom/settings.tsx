@@ -172,7 +172,14 @@ export function SettingsSelect({
       description={description}
       className={className}
     >
-      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+      <Select
+        items={options}
+        value={value}
+        onValueChange={(next) => {
+          if (next !== null) onValueChange(next);
+        }}
+        disabled={disabled}
+      >
         <SelectTrigger
           id={controlId}
           aria-describedby={description ? `${controlId}-description` : undefined}
@@ -242,7 +249,7 @@ export function SettingsAction({
     <SettingsItem label={label} description={description} className={className}>
       {confirmDialog ? (
         <AlertDialog>
-          <AlertDialogTrigger asChild>{button}</AlertDialogTrigger>
+          <AlertDialogTrigger render={button} />
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>

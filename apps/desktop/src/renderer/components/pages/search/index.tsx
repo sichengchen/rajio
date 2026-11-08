@@ -519,22 +519,24 @@ export function SearchPage() {
           podcasts={visibleDiscoverResults}
           renderActions={(podcast) => (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  aria-label={t("Subscribe to {name}", { name: podcast.title })}
-                  disabled={subscribingFeedUrl === podcast.feedUrl}
-                  onClick={() => void handleSubscribe(podcast)}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
-                >
-                  {subscribingFeedUrl === podcast.feedUrl ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                </Button>
-              </TooltipTrigger>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={t("Subscribe to {name}", { name: podcast.title })}
+                    disabled={subscribingFeedUrl === podcast.feedUrl}
+                    onClick={() => void handleSubscribe(podcast)}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {subscribingFeedUrl === podcast.feedUrl ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
+                }
+              />
               <TooltipContent>Subscribe</TooltipContent>
             </Tooltip>
           )}

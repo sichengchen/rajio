@@ -1,6 +1,6 @@
 import { t } from "../../../../shared/i18n";
 import { useLocale } from "@/lib/locale";
-"use client";
+("use client");
 
 import { type ReactNode, useMemo } from "react";
 import { Info, Play } from "lucide-react";
@@ -68,7 +68,9 @@ export function PodcastDetails({
                 type="button"
                 variant="outline"
               >
-                <Play className="size-3.5" data-icon="inline-start" fill="currentColor" />{t("Latest episode")}</Button>
+                <Play className="size-3.5" data-icon="inline-start" fill="currentColor" />
+                {t("Latest episode")}
+              </Button>
             ) : null}
             {updated ? <ContentMetadata className="text-sm" items={[updated]} /> : null}
           </div>
@@ -77,12 +79,14 @@ export function PodcastDetails({
       metadataAction={
         cleanDescription ? (
           <Dialog>
-            <DialogTrigger asChild>
-              <Button className="size-8 md:hidden" size="icon" variant="ghost">
-                <Info className="size-4" />
-                <span className="sr-only">{t("About this show")}</span>
-              </Button>
-            </DialogTrigger>
+            <DialogTrigger
+              render={
+                <Button className="size-8 md:hidden" size="icon" variant="ghost">
+                  <Info className="size-4" />
+                  <span className="sr-only">{t("About this show")}</span>
+                </Button>
+              }
+            />
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{podcast.title}</DialogTitle>

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
+import type { StyledProps } from "../ui/styled-props";
 
 import { cn } from "@/lib/utils";
 
-interface DesktopSafeScrollAreaProps
-  extends React.ComponentProps<typeof ScrollAreaPrimitive.Root> {
+interface DesktopSafeScrollAreaProps extends StyledProps<typeof ScrollAreaPrimitive.Root> {
   contentClassName?: string;
   contentStyle?: React.CSSProperties;
   scrollbarClassName?: string;
@@ -28,9 +28,7 @@ export function DesktopSafeScrollArea({
   ...props
 }: DesktopSafeScrollAreaProps) {
   const [isScrollbarVisible, setIsScrollbarVisible] = React.useState(false);
-  const hideScrollbarTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const hideScrollbarTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearHideScrollbarTimer = React.useCallback(() => {
     if (hideScrollbarTimer.current === null) {
@@ -67,7 +65,7 @@ export function DesktopSafeScrollArea({
 
   return (
     <ScrollAreaPrimitive.Root
-      className={cn("relative min-h-0 overflow-hidden", className)}
+      className={cn("relative min-h-0 min-w-0 overflow-hidden", className)}
       data-slot="desktop-safe-scroll-area"
       onPointerEnter={(event) => {
         showScrollbarTemporarily();
@@ -81,29 +79,27 @@ export function DesktopSafeScrollArea({
         showScrollbarTemporarily();
         onPointerMove?.(event);
       }}
-      type="auto"
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        className={cn("isolate h-full w-full", viewportClassName)}
+        className={cn("isolate h-full w-full min-w-0", viewportClassName)}
         data-slot="desktop-safe-scroll-viewport"
         onScroll={showScrollbarTemporarily}
+        style={{ overflowX: "hidden" }}
       >
-        <div
-          className={cn("min-w-0", contentClassName)}
+        <ScrollAreaPrimitive.Content
+          className={cn("min-w-0 w-full", contentClassName)}
           data-slot="desktop-safe-scroll-content"
-          style={contentStyle}
+          style={{ minWidth: 0, ...contentStyle }}
         >
           {children}
-        </div>
+        </ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>
 
-      <ScrollAreaPrimitive.ScrollAreaScrollbar
+      <ScrollAreaPrimitive.Scrollbar
         className={cn(
           "app-no-drag z-20 flex w-2 touch-none select-none rounded-full p-px transition-opacity duration-150",
-          isScrollbarVisible
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
+          isScrollbarVisible ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
           scrollbarClassName,
         )}
         data-slot="desktop-safe-scrollbar"
@@ -114,14 +110,14 @@ export function DesktopSafeScrollArea({
           top: "var(--desktop-window-safe-area-block)",
         }}
       >
-        <ScrollAreaPrimitive.ScrollAreaThumb
+        <ScrollAreaPrimitive.Thumb
           className={cn(
             "relative flex-1 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50",
             thumbClassName,
           )}
           data-slot="desktop-safe-scroll-thumb"
         />
-      </ScrollAreaPrimitive.ScrollAreaScrollbar>
+      </ScrollAreaPrimitive.Scrollbar>
     </ScrollAreaPrimitive.Root>
   );
 }
