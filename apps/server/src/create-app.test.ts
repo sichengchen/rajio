@@ -157,6 +157,67 @@ describe("createApp", () => {
     });
   });
 
+  it("exports authenticated active subscriptions as JSON and escaped OPML", async () => {
+    const date = "2026-04-18T00:00:00.000Z";
+    const feedUrl = "https://feed.example/rss?a=1&b=2";
+    const legacyUrl = "https://legacy.example/rss";
+    const deletedUrl = "https://deleted.example/rss";
+    const { app } = createTestServer({
+      subscriptions: [
+        { feedUrl, status: "active", subscribedAt: date, updatedAt: date },
+        { feedUrl: legacyUrl, status: "active", subscribedAt: date, updatedAt: date },
+        { feedUrl: deletedUrl, status: "deleted", subscribedAt: date, updatedAt: date },
+      ],
+    });
+    const base = "http://example.test/api/sync/subscriptions";
+    const headers = { Authorization: "Bearer test-token", "Content-Type": "application/json" };
+    for (const url of [base, `${base}.opml`]) {
+      expect((await app.request(url)).status).toBe(401);
+      expect((await app.request(url, { headers: { Authorization: "Bearer wrong" } })).status).toBe(
+        401,
+      );
+    }
+
+    const metadata = {
+      title: 'A & B <"show">',
+      author: "A. Host",
+      description: "A show's notes\nSecond line",
+      imageUrl: "https://feed.example/cover.jpg",
+      language: "en",
+    };
+    const update = await app.request(`${base}/metadata`, {
+      body: JSON.stringify([
+        { feedUrl, metadata },
+        { feedUrl: deletedUrl, metadata },
+      ]),
+      headers,
+      method: "PUT",
+    });
+    expect(update.status).toBe(204);
+
+    const json = await app.request(base, { headers });
+    expect(json.status).toBe(200);
+    expect(json.headers.get("Cache-Control")).toBe("no-store");
+    await expect(json.json()).resolves.toEqual({
+      podcasts: [
+        { ...metadata, feedUrl, subscribedAt: date },
+        { feedUrl: legacyUrl, subscribedAt: date },
+      ],
+    });
+
+    const opml = await app.request(`${base}.opml`, { headers });
+    expect(opml.status).toBe(200);
+    expect(opml.headers.get("Content-Disposition")).toContain("rajio-subscriptions.opml");
+    expect(opml.headers.get("Cache-Control")).toBe("no-store");
+    const xml = await opml.text();
+    expect(xml).toContain('<opml version="2.0">');
+    expect(xml).toContain('text="A &amp; B &lt;&quot;show&quot;&gt;"');
+    expect(xml).toContain('xmlUrl="https://feed.example/rss?a=1&amp;b=2"');
+    expect(xml).toContain('description="A show&apos;s notes&#10;Second line"');
+    expect(xml).toContain(`text="${legacyUrl}"`);
+    expect(xml).not.toContain(deletedUrl);
+  });
+
   it("checkpoint updates state and publishes realtime events", async () => {
     const { app, realtime } = createTestServer();
     const checkpointResponse = await app.request(

@@ -42,7 +42,17 @@ test("pulls remote subscriptions and playback checkpoints into local state", asy
   };
 
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (input) => {
+  let metadataUploaded = false;
+  globalThis.fetch = async (input, init) => {
+    if (String(input) === "https://sync.example/api/sync/subscriptions/metadata") {
+      assert.equal(init?.method, "PUT");
+      assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer token");
+      assert.deepEqual(JSON.parse(String(init?.body)), [
+        { feedUrl: "https://example.com/feed.xml", metadata: { title: "Remote Podcast" } },
+      ]);
+      metadataUploaded = true;
+      return new Response(null, { status: 204 });
+    }
     assert.equal(String(input), "https://sync.example/api/sync/state");
     return Response.json({
       currentPlayback: null,
@@ -70,6 +80,7 @@ test("pulls remote subscriptions and playback checkpoints into local state", asy
         {
           deletedAt: null,
           feedUrl: "https://example.com/feed.xml",
+          metadata: null,
           status: "active",
           subscribedAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
@@ -84,6 +95,7 @@ test("pulls remote subscriptions and playback checkpoints into local state", asy
     assert.equal(db.listPodcasts()[0]?.title, "Remote Podcast");
     assert.equal(db.listEpisodesByPodcast("podcast_1")[0]?.title, "Remote Episode");
     assert.equal(db.getPlaybackProgress("episode_1")?.currentTime, 25);
+    assert.equal(metadataUploaded, true);
   } finally {
     globalThis.fetch = originalFetch;
     db.close();

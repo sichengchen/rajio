@@ -5,15 +5,18 @@ import {
   type PlaybackCheckpointRequest,
   type RealtimeTicketRequest,
   type ServerMetaResponse,
+  type SubscriptionMetadataUpdate,
   type SubscriptionMutationRequest,
   type UpdatePreferencesRequest,
 } from "@rajio-app/contracts";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 
 import type { AuthGuard } from "../../core/auth";
 import { BadRequestError, HttpError, UnauthorizedError } from "../../core/errors";
 import type { RealtimeCoordinator } from "../../core/realtime";
 import { SyncService } from "../../core/sync-service";
+import { createSubscriptionsOpml } from "./subscriptions-opml";
 
 interface CreateAppOptions {
   authGuard: AuthGuard;
@@ -69,6 +72,26 @@ export function createApp(options: CreateAppOptions) {
   });
 
   app.get("/api/sync/state", async (c) => c.json(await options.syncService.getState()));
+
+  app.get("/api/sync/subscriptions", async (c) => {
+    const podcasts = await options.syncService.getSubscribedPodcasts();
+    return c.json({ podcasts }, 200, { "Cache-Control": "no-store" });
+  });
+
+  app.get("/api/sync/subscriptions.opml", async (c) => {
+    const podcasts = await options.syncService.getSubscribedPodcasts();
+    return c.body(createSubscriptionsOpml(podcasts), 200, {
+      "Cache-Control": "no-store",
+      "Content-Disposition": 'attachment; filename="rajio-subscriptions.opml"',
+      "Content-Type": "text/x-opml; charset=utf-8",
+    });
+  });
+
+  app.put("/api/sync/subscriptions/metadata", bodyLimit({ maxSize: 1024 * 1024 }), async (c) => {
+    const updates = await readJson<SubscriptionMetadataUpdate[]>(c.req.raw);
+    await options.syncService.updateSubscriptionMetadata(updates);
+    return c.body(null, 204);
+  });
 
   app.post("/api/sync/bootstrap", async (c) => {
     const body = await readJson<BootstrapSyncRequest>(c.req.raw);

@@ -76,6 +76,13 @@ pnpm cf:deploy
 
 The deployment script creates or reuses the D1 database, applies migrations, deploys the server Worker, and prints the sync endpoint plus bearer token for Rajio desktop settings.
 
+The subscription API requires the same `Authorization: Bearer <token>` header as sync:
+
+- `GET /api/sync/subscriptions` returns `{ "podcasts": [...] }` with active subscriptions. Each record has `feedUrl` and `subscribedAt`. When available, it includes `title`, `author`, `description`, `imageUrl`, and `language`.
+- `GET /api/sync/subscriptions.opml` downloads the active subscriptions as `rajio-subscriptions.opml`. It uses the feed URL as the display title until metadata is available.
+
+After deploying this update, use **Settings → Sync Backend → Sync Now** in the updated desktop app to populate metadata for existing server subscriptions.
+
 ## Quick Start
 
 ```bash

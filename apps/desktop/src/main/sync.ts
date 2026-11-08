@@ -1,4 +1,10 @@
-import { normalizeBackendUrl, type SyncStateResponse } from "@rajio-app/contracts";
+import {
+  SUBSCRIPTION_METADATA_BATCH_SIZE,
+  normalizeBackendUrl,
+  normalizePodcastMetadata,
+  type SubscriptionMetadataUpdate,
+  type SyncStateResponse,
+} from "@rajio-app/contracts";
 import { hostname } from "node:os";
 
 import { isSyncEnabled } from "../shared/sync-settings";
@@ -33,17 +39,17 @@ export class SyncService {
 
   private async flushEntry(baseUrl: string, token: string, entry: SyncOutboxEntry): Promise<boolean> {
     if (entry.kind === "subscription.upsert") {
-      await postJson(`${baseUrl}/api/sync/subscriptions/upsert`, token, entry.payload);
+      await sendJson(`${baseUrl}/api/sync/subscriptions/upsert`, token, entry.payload);
       return true;
     }
 
     if (entry.kind === "subscription.delete") {
-      await postJson(`${baseUrl}/api/sync/subscriptions/delete`, token, entry.payload);
+      await sendJson(`${baseUrl}/api/sync/subscriptions/delete`, token, entry.payload);
       return true;
     }
 
     if (entry.kind === "playback.checkpoint") {
-      await postJson(`${baseUrl}/api/sync/playback/checkpoint`, token, {
+      await sendJson(`${baseUrl}/api/sync/playback/checkpoint`, token, {
         checkpoint: entry.payload,
         deviceId: getDeviceId(),
       });
@@ -64,7 +70,36 @@ export class SyncService {
       throw new Error(`Sync pull failed with HTTP ${response.status}`);
     }
 
-    await this.applyRemoteState((await response.json()) as SyncStateResponse);
+    const state = (await response.json()) as SyncStateResponse;
+    await this.applyRemoteState(state);
+    await this.syncSubscriptionMetadata(baseUrl, token, state.subscriptions);
+  }
+
+  private async syncSubscriptionMetadata(
+    baseUrl: string,
+    token: string,
+    subscriptions: SyncStateResponse["subscriptions"],
+  ): Promise<void> {
+    const updates: SubscriptionMetadataUpdate[] = [];
+    for (const subscription of subscriptions) {
+      // Older servers omit the field. Servers that support metadata return null for legacy rows.
+      if (subscription.status !== "active" || subscription.metadata === undefined) continue;
+      const podcast = this.db.getPodcastByFeedUrl(subscription.feedUrl);
+      if (!podcast?.title.trim()) continue;
+      const metadata = normalizePodcastMetadata(podcast);
+      const remote = subscription.metadata && normalizePodcastMetadata(subscription.metadata);
+      if (JSON.stringify(metadata) !== JSON.stringify(remote)) {
+        updates.push({ feedUrl: subscription.feedUrl, metadata });
+      }
+    }
+    for (let offset = 0; offset < updates.length; offset += SUBSCRIPTION_METADATA_BATCH_SIZE) {
+      await sendJson(
+        `${baseUrl}/api/sync/subscriptions/metadata`,
+        token,
+        updates.slice(offset, offset + SUBSCRIPTION_METADATA_BATCH_SIZE),
+        "PUT",
+      );
+    }
   }
 
   private async applyRemoteState(state: SyncStateResponse): Promise<void> {
@@ -102,14 +137,14 @@ export class SyncService {
   }
 }
 
-async function postJson(url: string, token: string, body: unknown): Promise<void> {
+async function sendJson(url: string, token: string, body: unknown, method = "POST"): Promise<void> {
   const response = await fetch(url, {
     body: JSON.stringify(body),
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    method: "POST",
+    method,
   });
 
   if (!response.ok) {

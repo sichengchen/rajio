@@ -20,6 +20,37 @@ export interface SubscriptionRecord {
   subscribedAt: ISODateString;
   updatedAt: ISODateString;
   deletedAt?: ISODateString | null;
+  metadata?: PodcastMetadata | null;
+}
+
+export interface PodcastMetadata {
+  title: string;
+  author?: string;
+  description?: string;
+  imageUrl?: string;
+  language?: string;
+}
+
+export interface SubscribedPodcast extends Partial<PodcastMetadata> {
+  feedUrl: string;
+  subscribedAt: ISODateString;
+}
+
+export interface SubscriptionMetadataUpdate {
+  feedUrl: string;
+  metadata: PodcastMetadata;
+}
+
+export const SUBSCRIPTION_METADATA_BATCH_SIZE = 25;
+
+export function normalizePodcastMetadata(metadata: PodcastMetadata): PodcastMetadata {
+  return {
+    title: metadata.title.trim().slice(0, 512),
+    author: metadata.author?.trim().slice(0, 512) || undefined,
+    description: metadata.description?.trim().slice(0, 4000) || undefined,
+    imageUrl: metadata.imageUrl?.trim().slice(0, 2048) || undefined,
+    language: metadata.language?.trim().slice(0, 64) || undefined,
+  };
 }
 
 export interface PlaybackCheckpointSyncRecord {

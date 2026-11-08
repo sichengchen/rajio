@@ -1,11 +1,15 @@
 import {
   DEFAULT_SYNC_PREFERENCES,
+  SUBSCRIPTION_METADATA_BATCH_SIZE,
   createSyncLocatorKey,
+  normalizePodcastMetadata,
   type BootstrapSyncRequest,
   type ClearCurrentPlaybackRequest,
   type CurrentPlaybackSyncRecord,
   type PlaybackCheckpointRequest,
   type PlaybackCheckpointSyncRecord,
+  type SubscribedPodcast,
+  type SubscriptionMetadataUpdate,
   type SyncPreferences,
   type SyncStateResponse,
   type UpdatePreferencesRequest,
@@ -21,6 +25,37 @@ export class SyncService {
     private readonly repositories: ServerRepositories,
     private readonly realtimeCoordinator: RealtimeCoordinator,
   ) {}
+
+  async getSubscribedPodcasts(): Promise<SubscribedPodcast[]> {
+    const records = await this.repositories.subscriptions.list();
+    return records
+      .filter((record) => record.status === "active")
+      .map(({ feedUrl, metadata, subscribedAt }) => ({ ...metadata, feedUrl, subscribedAt }));
+  }
+
+  async updateSubscriptionMetadata(updates: SubscriptionMetadataUpdate[]): Promise<void> {
+    if (!Array.isArray(updates) || updates.length > SUBSCRIPTION_METADATA_BATCH_SIZE) {
+      throw new BadRequestError(
+        `Expected at most ${SUBSCRIPTION_METADATA_BATCH_SIZE} metadata updates`,
+      );
+    }
+    const records = updates.map((update) => {
+      const metadata = update?.metadata;
+      if (
+        typeof update?.feedUrl !== "string" ||
+        !update.feedUrl.trim() ||
+        typeof metadata?.title !== "string" ||
+        !metadata.title.trim() ||
+        [metadata.author, metadata.description, metadata.imageUrl, metadata.language].some(
+          (value) => value !== undefined && typeof value !== "string",
+        )
+      ) {
+        throw new BadRequestError("Each metadata update needs a feedUrl and podcast title");
+      }
+      return { feedUrl: update.feedUrl.trim(), metadata: normalizePodcastMetadata(metadata) };
+    });
+    await this.repositories.subscriptions.updateMetadata(records);
+  }
 
   async getState(): Promise<SyncStateResponse> {
     const [subscriptions, playbackHistory, currentPlayback, preferences] = await Promise.all([

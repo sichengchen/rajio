@@ -84,8 +84,23 @@ export function createInMemoryRepositories(initial?: {
         return [...subscriptions];
       },
       async upsert(record) {
+        const existing = subscriptions.find(
+          (subscription) => subscription.feedUrl === record.feedUrl,
+        );
         subscriptions = subscriptions.filter((existing) => existing.feedUrl !== record.feedUrl);
-        subscriptions.push(record);
+        subscriptions.push({
+          ...record,
+          ...(existing?.metadata && record.status === "active"
+            ? { metadata: existing.metadata }
+            : {}),
+        });
+      },
+      async updateMetadata(updates) {
+        const byFeed = new Map(updates.map((update) => [update.feedUrl, update.metadata]));
+        subscriptions = subscriptions.map((record) => {
+          const metadata = byFeed.get(record.feedUrl);
+          return record.status === "active" && metadata ? { ...record, metadata } : record;
+        });
       },
     },
     syncPreferences: {

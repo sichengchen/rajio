@@ -2,12 +2,14 @@ import type {
   CurrentPlaybackSyncRecord,
   PlaybackCheckpointSyncRecord,
   SubscriptionRecord,
+  SubscriptionMetadataUpdate,
   SyncPreferences,
 } from "@rajio-app/contracts";
 
 export interface SubscriptionRepository {
   list(): Promise<SubscriptionRecord[]>;
   upsert(record: SubscriptionRecord): Promise<void>;
+  updateMetadata(updates: SubscriptionMetadataUpdate[]): Promise<void>;
 }
 
 export interface PlaybackCheckpointRepository {

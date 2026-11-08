@@ -2,10 +2,11 @@ import {
   createSyncLocatorKey,
   type CurrentPlaybackSyncRecord,
   type PlaybackCheckpointSyncRecord,
+  type SubscriptionMetadataUpdate,
   type SubscriptionRecord,
   type SyncPreferences,
 } from "@rajio-app/contracts";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle, type DrizzleD1Database } from "drizzle-orm/d1";
 
 import type { ServerRepositories } from "../../../core/repositories";
@@ -41,6 +42,7 @@ class DrizzleSubscriptionRepository {
     return rows.map((row) => ({
       deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
       feedUrl: row.feedUrl,
+      metadata: row.metadata,
       status: row.status === "deleted" ? "deleted" : "active",
       subscribedAt: new Date(row.subscribedAt).toISOString(),
       updatedAt: new Date(row.updatedAt).toISOString(),
@@ -60,12 +62,23 @@ class DrizzleSubscriptionRepository {
       .onConflictDoUpdate({
         set: {
           deletedAt: record.deletedAt ? toMillis(record.deletedAt) : null,
+          ...(record.status === "deleted" ? { metadata: null } : {}),
           status: record.status,
           subscribedAt: toMillis(record.subscribedAt),
           updatedAt: toMillis(record.updatedAt),
         },
         target: subscriptions.feedUrl,
       });
+  }
+
+  async updateMetadata(updates: SubscriptionMetadataUpdate[]): Promise<void> {
+    const [first, ...rest] = updates.map(({ feedUrl, metadata }) =>
+      this.db
+        .update(subscriptions)
+        .set({ metadata })
+        .where(and(eq(subscriptions.feedUrl, feedUrl), eq(subscriptions.status, "active"))),
+    );
+    if (first) await this.db.batch([first, ...rest]);
   }
 }
 

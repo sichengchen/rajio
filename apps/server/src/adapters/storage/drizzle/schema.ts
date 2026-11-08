@@ -1,8 +1,10 @@
+import type { PodcastMetadata } from "@rajio-app/contracts";
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const subscriptions = sqliteTable("subscriptions", {
   deletedAt: integer("deleted_at", { mode: "number" }),
   feedUrl: text("feed_url").primaryKey(),
+  metadata: text("metadata", { mode: "json" }).$type<PodcastMetadata>(),
   status: text("status").notNull(),
   subscribedAt: integer("subscribed_at", { mode: "number" }).notNull(),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
