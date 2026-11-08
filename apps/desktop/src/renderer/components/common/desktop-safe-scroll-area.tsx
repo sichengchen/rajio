@@ -85,7 +85,7 @@ export function DesktopSafeScrollArea({
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        className={cn("h-full w-full", viewportClassName)}
+        className={cn("isolate h-full w-full", viewportClassName)}
         data-slot="desktop-safe-scroll-viewport"
         onScroll={showScrollbarTemporarily}
       >
