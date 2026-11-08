@@ -77,4 +77,5 @@ export interface DesktopSettings {
   playbackQueue?: string;
   syncAuthToken?: string;
   syncBaseUrl?: string;
+  syncEnabled?: "true" | "false";
 }

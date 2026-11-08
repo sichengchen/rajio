@@ -309,5 +309,15 @@
   "Scope": "Portée",
   "In Rajio": "Dans Rajio",
   "Global": "Global",
-  "Version {version}": "Version {version}"
+  "Version {version}": "Version {version}",
+  "Enable Sync": "Activer la synchronisation",
+  "Sync Backend": "Serveur de synchronisation",
+  "Endpoint": "Adresse du serveur",
+  "Token": "Jeton",
+  "Sync Now": "Synchroniser maintenant",
+  "Syncing…": "Synchronisation…",
+  "Last synced: {date}": "Dernière synchronisation : {date}",
+  "Sync failed": "Échec de la synchronisation",
+  "Unable to save sync settings": "Impossible d’enregistrer les réglages de synchronisation",
+  "Enter a valid HTTP or HTTPS endpoint": "Saisissez une adresse HTTP ou HTTPS valide"
 }

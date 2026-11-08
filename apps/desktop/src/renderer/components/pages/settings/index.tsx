@@ -22,6 +22,8 @@ import { useTheme } from "next-themes";
 import { OPMLManager } from "../../common/opml-manager";
 import { toast } from "sonner";
 import { desktopApi } from "@/desktop-api";
+import { initializeSync } from "@/lib/sync/bridge";
+import { SyncSettings } from "./sync-settings";
 
 export function SettingsPage() {
   useLocale();
@@ -55,6 +57,7 @@ export function SettingsPage() {
   const [isChoosingDownloadDirectory, setIsChoosingDownloadDirectory] = useState(false);
   const [downloadLimit, setDownloadLimit] = useState("2147483648");
   const [downloadDirectory, setDownloadDirectory] = useState<string | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const { theme, setTheme } = useTheme();
 
   const {
@@ -93,6 +96,8 @@ export function SettingsPage() {
       .get()
       .then((settings) => {
         if (isCurrent) {
+          initializeSync(settings);
+          setSettingsLoaded(true);
           setDownloadDirectory(settings.downloadDirectory ?? null);
           setDownloadLimit(settings.downloadLimitBytes ?? "2147483648");
         }
@@ -297,6 +302,8 @@ export function SettingsPage() {
             onCheckedChange={handleItunesSearchEnabledChange}
           />
         </SettingsGroup>
+
+        <SyncSettings ready={settingsLoaded} />
 
         <ShortcutSettings />
 

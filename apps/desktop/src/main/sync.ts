@@ -1,6 +1,7 @@
 import { normalizeBackendUrl, type SyncStateResponse } from "@rajio-app/contracts";
 import { hostname } from "node:os";
 
+import { isSyncEnabled } from "../shared/sync-settings";
 import type { LocalDatabase, SyncOutboxEntry } from "./db";
 import { RssService } from "./rss";
 
@@ -16,28 +17,29 @@ export class SyncService {
 
   async syncNow(): Promise<void> {
     const settings = this.db.getSettings();
-    if (!settings.syncBaseUrl || !settings.syncAuthToken) {
+    if (!isSyncEnabled(settings) || !settings.syncBaseUrl || !settings.syncAuthToken) {
       return;
     }
 
     const baseUrl = normalizeBackendUrl(settings.syncBaseUrl);
     for (const entry of this.db.listOutbox()) {
-      await this.flushEntry(baseUrl, settings.syncAuthToken, entry);
-      this.db.deleteOutboxEntry(entry.id);
+      if (await this.flushEntry(baseUrl, settings.syncAuthToken, entry)) {
+        this.db.deleteOutboxEntry(entry.id);
+      }
     }
 
     await this.pullRemoteState(baseUrl, settings.syncAuthToken);
   }
 
-  private async flushEntry(baseUrl: string, token: string, entry: SyncOutboxEntry): Promise<void> {
+  private async flushEntry(baseUrl: string, token: string, entry: SyncOutboxEntry): Promise<boolean> {
     if (entry.kind === "subscription.upsert") {
       await postJson(`${baseUrl}/api/sync/subscriptions/upsert`, token, entry.payload);
-      return;
+      return true;
     }
 
     if (entry.kind === "subscription.delete") {
       await postJson(`${baseUrl}/api/sync/subscriptions/delete`, token, entry.payload);
-      return;
+      return true;
     }
 
     if (entry.kind === "playback.checkpoint") {
@@ -45,7 +47,10 @@ export class SyncService {
         checkpoint: entry.payload,
         deviceId: getDeviceId(),
       });
+      return true;
     }
+
+    return false;
   }
 
   private async pullRemoteState(baseUrl: string, token: string): Promise<void> {

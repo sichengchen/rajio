@@ -309,5 +309,15 @@
   "Scope": "Ámbito",
   "In Rajio": "En Rajio",
   "Global": "Global",
-  "Version {version}": "Versión {version}"
+  "Version {version}": "Versión {version}",
+  "Enable Sync": "Activar la sincronización",
+  "Sync Backend": "Servidor de sincronización",
+  "Endpoint": "Dirección del servidor",
+  "Token": "Token",
+  "Sync Now": "Sincronizar ahora",
+  "Syncing…": "Sincronizando…",
+  "Last synced: {date}": "Última sincronización: {date}",
+  "Sync failed": "Error de sincronización",
+  "Unable to save sync settings": "No se pudieron guardar los ajustes de sincronización",
+  "Enter a valid HTTP or HTTPS endpoint": "Introduce una dirección HTTP o HTTPS válida"
 }

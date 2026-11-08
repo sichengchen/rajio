@@ -309,5 +309,15 @@
   "Scope": "Geltungsbereich",
   "In Rajio": "In Rajio",
   "Global": "Global",
-  "Version {version}": "Version {version}"
+  "Version {version}": "Version {version}",
+  "Enable Sync": "Synchronisierung aktivieren",
+  "Sync Backend": "Synchronisierungsserver",
+  "Endpoint": "Serveradresse",
+  "Token": "Token",
+  "Sync Now": "Jetzt synchronisieren",
+  "Syncing…": "Synchronisierung läuft…",
+  "Last synced: {date}": "Zuletzt synchronisiert: {date}",
+  "Sync failed": "Synchronisierung fehlgeschlagen",
+  "Unable to save sync settings": "Synchronisierungseinstellungen konnten nicht gespeichert werden",
+  "Enter a valid HTTP or HTTPS endpoint": "Gib eine gültige HTTP- oder HTTPS-Adresse ein"
 }

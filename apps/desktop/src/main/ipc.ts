@@ -104,6 +104,10 @@ export function registerIpcHandlers(
     return result;
   });
 
-  ipcMain.handle(ipcChannels.sync.now, () => sync.syncNow());
+  ipcMain.handle(ipcChannels.sync.now, async () => {
+    await sync.syncNow();
+    for (const window of BrowserWindow.getAllWindows())
+      window.webContents.send(ipcChannels.library.changed);
+  });
   return refresh;
 }

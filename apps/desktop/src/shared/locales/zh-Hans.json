@@ -309,5 +309,15 @@
   "Scope": "范围",
   "In Rajio": "仅 Rajio",
   "Global": "全局",
-  "Version {version}": "版本 {version}"
+  "Version {version}": "版本 {version}",
+  "Enable Sync": "启用同步",
+  "Sync Backend": "同步服务器",
+  "Endpoint": "服务器地址",
+  "Token": "令牌",
+  "Sync Now": "立即同步",
+  "Syncing…": "正在同步…",
+  "Last synced: {date}": "上次同步：{date}",
+  "Sync failed": "同步失败",
+  "Unable to save sync settings": "无法保存同步设置",
+  "Enter a valid HTTP or HTTPS endpoint": "请输入有效的 HTTP 或 HTTPS 地址"
 }

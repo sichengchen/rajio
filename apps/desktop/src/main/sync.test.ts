@@ -90,7 +90,7 @@ test("pulls remote subscriptions and playback checkpoints into local state", asy
   }
 });
 
-test("returns without network requests when sync settings are incomplete", async () => {
+test("makes no network requests when sync is disabled or settings are incomplete", async () => {
   const db = createTestDatabase();
   db.appendOutbox("subscription.upsert", { feedUrl: "https://example.com/feed.xml" });
   const originalFetch = globalThis.fetch;
@@ -102,6 +102,8 @@ test("returns without network requests when sync settings are incomplete", async
 
   try {
     await new SyncService(db).syncNow();
+    db.setSettings({ syncEnabled: "false", syncAuthToken: "token", syncBaseUrl: "https://sync.example" });
+    await new SyncService(db).syncNow();
 
     assert.equal(requested, false);
     assert.equal(db.listOutbox().length, 1);
@@ -111,13 +113,14 @@ test("returns without network requests when sync settings are incomplete", async
   }
 });
 
-test("flushes outbox entries with normalized backend URL before pulling remote state", async () => {
+test("flushes supported outbox entries before pulling state and keeps unsupported entries", async () => {
   const db = createTestDatabase();
   db.setSettings({
     syncAuthToken: "token",
     syncBaseUrl: "https://sync.example///",
   });
   db.appendOutbox("subscription.upsert", { feedUrl: "https://example.com/feed.xml" });
+  db.appendOutbox("collection.queue.v1", ["episode-id"]);
   db.appendOutbox("subscription.delete", { feedUrl: "https://old.example/feed.xml" });
   db.appendOutbox("playback.checkpoint", {
     currentTime: 10,
@@ -162,7 +165,7 @@ test("flushes outbox entries with normalized backend URL before pulling remote s
     assert.equal(requests[0]?.headers.get("Authorization"), "Bearer token");
     assert.equal(requests[0]?.headers.get("Content-Type"), "application/json");
     assert.match(String((requests[2]?.body as { deviceId?: string }).deviceId), /^desktop-/);
-    assert.equal(db.listOutbox().length, 0);
+    assert.deepEqual(db.listOutbox().map((entry) => entry.kind), ["collection.queue.v1"]);
   } finally {
     globalThis.fetch = originalFetch;
     db.close();

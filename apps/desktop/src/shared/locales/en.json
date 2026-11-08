@@ -309,5 +309,15 @@
   "Scope": "Scope",
   "In Rajio": "In Rajio",
   "Global": "Global",
-  "Version {version}": "Version {version}"
+  "Version {version}": "Version {version}",
+  "Enable Sync": "Enable Sync",
+  "Sync Backend": "Sync Backend",
+  "Endpoint": "Endpoint",
+  "Token": "Token",
+  "Sync Now": "Sync Now",
+  "Syncing…": "Syncing…",
+  "Last synced: {date}": "Last synced: {date}",
+  "Sync failed": "Sync failed",
+  "Unable to save sync settings": "Unable to save sync settings",
+  "Enter a valid HTTP or HTTPS endpoint": "Enter a valid HTTP or HTTPS endpoint"
 }

@@ -1,38 +1,30 @@
 import { desktopApi } from "@/desktop-api";
 import { useSyncBackendStore } from "@/lib/sync/store";
+import { isSyncEnabled } from "../../../shared/sync-settings";
+import type { DesktopSettings } from "../../../shared/types";
 
-export async function initializeSync() {
-  const settings = await desktopApi.settings.get();
-  useSyncBackendStore.getState().setConnection({
-    apiToken: settings.syncAuthToken ?? "",
-    backendUrl: settings.syncBaseUrl ?? "",
-    connectionStatus: settings.syncBaseUrl && settings.syncAuthToken ? "connected" : "disconnected",
-  });
-}
+let pendingWrite = Promise.resolve();
 
-export async function connectSyncBackend(backendUrl: string, apiToken: string) {
-  await desktopApi.settings.set({
-    syncAuthToken: apiToken,
-    syncBaseUrl: backendUrl,
-  });
-  useSyncBackendStore.getState().setConnection({
+export function initializeSync(settings: DesktopSettings) {
+  const connection = useSyncBackendStore.getState();
+  const apiToken = settings.syncAuthToken ?? "";
+  const backendUrl = settings.syncBaseUrl ?? "";
+  const enabled = isSyncEnabled(settings);
+  if (connection.apiToken === apiToken && connection.backendUrl === backendUrl && connection.enabled === enabled) return;
+
+  connection.setConnection({
     apiToken,
     backendUrl,
-    connectionStatus: "connected",
-    lastValidatedAt: new Date().toISOString(),
+    enabled,
+    connectionStatus: enabled && backendUrl && apiToken ? "connected" : "disconnected",
+    lastValidatedAt: undefined,
   });
 }
 
-export function disconnectSyncBackend() {
-  void desktopApi.settings.set({
-    syncAuthToken: "",
-    syncBaseUrl: "",
-  });
-  useSyncBackendStore.getState().setConnection({
-    apiToken: "",
-    backendUrl: "",
-    connectionStatus: "disconnected",
-  });
+export function saveSyncSettings(patch: Pick<DesktopSettings, "syncAuthToken" | "syncBaseUrl" | "syncEnabled">) {
+  const write = pendingWrite.then(async () => initializeSync(await desktopApi.settings.set(patch)));
+  pendingWrite = write.catch(() => undefined);
+  return write;
 }
 
 export async function syncNow() {

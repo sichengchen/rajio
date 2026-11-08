@@ -309,5 +309,15 @@
   "Scope": "範囲",
   "In Rajio": "Rajio内",
   "Global": "グローバル",
-  "Version {version}": "バージョン {version}"
+  "Version {version}": "バージョン {version}",
+  "Enable Sync": "同期を有効にする",
+  "Sync Backend": "同期サーバー",
+  "Endpoint": "エンドポイント",
+  "Token": "トークン",
+  "Sync Now": "今すぐ同期",
+  "Syncing…": "同期中…",
+  "Last synced: {date}": "最終同期：{date}",
+  "Sync failed": "同期に失敗しました",
+  "Unable to save sync settings": "同期設定を保存できませんでした",
+  "Enter a valid HTTP or HTTPS endpoint": "有効な HTTP または HTTPS のエンドポイントを入力してください"
 }
