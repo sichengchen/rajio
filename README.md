@@ -42,6 +42,10 @@ Build:
 pnpm --filter @rajio-app/desktop build
 ```
 
+On macOS, install Rajio with `brew install --cask sichengchen/tap/rajio`.
+
+To release a macOS build, run [Sign and notarize macOS release](https://github.com/sichengchen/macos-release/actions/workflows/release-macos.yml) on `main` with `app=rajio`. The release GitHub App needs access to `sichengchen/rajio` and `sichengchen/homebrew-tap`. Leave the run ID blank to start a build, or supply a successful **Prepare macOS release** run ID. A version bump updates `main` even during a signing check. Use `current` to rebuild a prepared, untagged version. Enable **Publish** to tag the Rajio source commit, publish the notarized universal DMG, and update the tap.
+
 ## iOS App (`apps/ios`)
 
 Use Xcode 26.3 or newer, Rust 1.96.0, and XcodeGen:

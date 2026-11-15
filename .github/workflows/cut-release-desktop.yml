@@ -1,20 +1,21 @@
-name: Cut release (desktop)
+name: Prepare macOS release
 
 on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Semantic version part to bump for this release
+        description: Version to prepare (current retries an existing version)
         default: patch
         options:
-          - minor
+          - current
           - patch
+          - minor
           - major
         required: true
         type: choice
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: cut-release
@@ -22,66 +23,67 @@ concurrency:
 
 jobs:
   bump:
-    name: Bump release version
+    name: Prepare release version
+    if: github.repository == 'sichengchen/rajio' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.version.outputs.release }}
       sha: ${{ steps.version.outputs.sha }}
-      tag: ${{ steps.version.outputs.tag }}
     steps:
-      - name: Check out main
+      - name: Check out dispatched commit
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ github.sha }}
 
-      - name: Bump and push release version
+      - name: Prepare and push release version
         id: version
         env:
           INPUT_BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
-          current_version="$(node scripts/version.mjs current)"
-          release_version="$(node scripts/version.mjs bump "$current_version" "$INPUT_BUMP")"
+          release_version="$(node scripts/version.mjs current)"
+          if [[ "$INPUT_BUMP" != current ]]; then
+            release_version="$(node scripts/version.mjs bump "$release_version" "$INPUT_BUMP")"
+          fi
           tag="v${release_version}"
           if git show-ref --verify --quiet "refs/tags/${tag}"; then
             echo "Tag ${tag} already exists" >&2
             exit 1
           fi
 
-          node scripts/version.mjs set "$release_version"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add apps/desktop/package.json apps/server/package.json packages/contracts/package.json
-          git commit -m "release: prepare ${tag}"
-          git push origin HEAD:main
+          if [[ "$INPUT_BUMP" != current ]]; then
+            node scripts/version.mjs set "$release_version"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add apps/desktop/package.json apps/server/package.json packages/contracts/package.json
+            git commit -m "chore(release): prepare ${tag}" \
+              -m "Co-Authored-By: Sicheng Chen (bot) <gh-bot@scchan.com>"
+            git push origin HEAD:main
+          fi
 
           {
             echo "release=${release_version}"
             echo "sha=$(git rev-parse HEAD)"
-            echo "tag=${tag}"
           } >> "$GITHUB_OUTPUT"
 
-  release:
-    name: Build, notarize, and publish
+  prepare:
+    name: Build and test the release artifact
     needs: bump
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     env:
-      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-      APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
-      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-      CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      RELEASE_VERSION: ${{ needs.bump.outputs.release }}
+      RELEASE_SHA: ${{ needs.bump.outputs.sha }}
 
     steps:
-      - name: Check out main
+      - name: Check out release commit
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          ref: ${{ needs.bump.outputs.sha }}
+          ref: ${{ env.RELEASE_SHA }}
+          persist-credentials: false
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -93,36 +95,6 @@ jobs:
         with:
           cache: pnpm
           node-version: 22
-
-      - name: Determine notarization availability
-        id: notarization
-        run: |
-          set -euo pipefail
-          notarization_secrets=(
-            APPLE_API_ISSUER
-            APPLE_API_KEY_BASE64
-            APPLE_API_KEY_ID
-            APPLE_TEAM_ID
-            CSC_KEY_PASSWORD
-            CSC_LINK
-          )
-          enabled=true
-          for secret_name in "${notarization_secrets[@]}"; do
-            if [[ -z "${!secret_name}" ]]; then
-              enabled=false
-            fi
-          done
-          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
-          if [[ "$enabled" == "false" ]]; then
-            echo "Apple notarization is not fully configured; notarization will be skipped."
-          fi
-
-      - name: Validate publishing secrets
-        run: |
-          if [[ -z "$HOMEBREW_TAP_TOKEN" ]]; then
-            echo "Required repository secret HOMEBREW_TAP_TOKEN is not configured" >&2
-            exit 1
-          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -137,47 +109,18 @@ jobs:
           pnpm check
           pnpm test
 
-      - name: Prepare App Store Connect API key
-        if: steps.notarization.outputs.enabled == 'true'
-        run: |
-          set -euo pipefail
-          api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
-          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$api_key_path"
-          chmod 600 "$api_key_path"
-          echo "APPLE_API_KEY=${api_key_path}" >> "$GITHUB_ENV"
-
-      - name: Build universal macOS DMG
+      - name: Build universal macOS app
         env:
-          NOTARIZE: ${{ steps.notarization.outputs.enabled }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           set -euo pipefail
-          if [[ "$NOTARIZE" == "true" ]]; then
-            pnpm --filter @rajio-app/desktop package:mac
-          else
-            pnpm --filter @rajio-app/desktop build
-            env \
-              -u APPLE_API_ISSUER \
-              -u APPLE_API_KEY \
-              -u APPLE_API_KEY_BASE64 \
-              -u APPLE_API_KEY_ID \
-              -u APPLE_TEAM_ID \
-              -u CSC_KEY_PASSWORD \
-              -u CSC_LINK \
-              CSC_IDENTITY_AUTO_DISCOVERY=false \
-              pnpm --filter @rajio-app/desktop exec electron-builder \
-                --mac \
-                --config.mac.notarize=false \
-                --publish never
-          fi
-
-      - name: Locate DMG
-        env:
-          RELEASE_VERSION: ${{ needs.bump.outputs.release }}
-        run: |
-          set -euo pipefail
-          dmg_path="apps/desktop/release/Rajio-${RELEASE_VERSION}-universal.dmg"
-          test -f "$dmg_path"
-          echo "dmg=${dmg_path}" >> "$GITHUB_ENV"
+          pnpm --filter @rajio-app/desktop build
+          pnpm --filter @rajio-app/desktop exec electron-builder --mac dir --universal \
+            --config.mac.identity=- --config.mac.hardenedRuntime=false \
+            --config.mac.notarize=false --publish never
+          app="apps/desktop/release/mac-universal/Rajio.app"
+          lipo "$app/Contents/MacOS/Rajio" -verify_arch arm64 x86_64
+          codesign --verify --deep --strict "$app"
 
       - name: Smoke test packaged app startup
         run: |
@@ -227,63 +170,23 @@ jobs:
           echo "Packaged Rajio did not finish startup within 30 seconds" >&2
           exit 1
 
-      - name: Notarize and staple DMG
-        if: steps.notarization.outputs.enabled == 'true'
+      - name: Prepare signing handoff
         run: |
           set -euo pipefail
-          xcrun notarytool submit "$dmg" \
-            --issuer "$APPLE_API_ISSUER" \
-            --key "$APPLE_API_KEY" \
-            --key-id "$APPLE_API_KEY_ID" \
-            --wait
-          xcrun stapler staple "$dmg"
+          mkdir -p "$RUNNER_TEMP/rajio-release"
+          ditto -c -k --norsrc --keepParent \
+            apps/desktop/release/mac-universal/Rajio.app "$RUNNER_TEMP/rajio-release/app.zip"
+          jq -n --arg sha "$RELEASE_SHA" --arg version "$RELEASE_VERSION" \
+            '{sha: $sha, version: $version}' > "$RUNNER_TEMP/rajio-release/release.json"
+          printf 'Signing workflow: https://github.com/sichengchen/macos-release/actions/workflows/release-macos.yml\n\nBuild run ID: %s\n' \
+            "$GITHUB_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Verify signed and notarized artifacts
-        if: steps.notarization.outputs.enabled == 'true'
-        run: |
-          set -euo pipefail
-          app_path="apps/desktop/release/mac-universal/Rajio.app"
-          test -d "$app_path"
-          codesign --verify --deep --strict --verbose=2 "$app_path"
-          xcrun stapler validate "$app_path"
-          xcrun stapler validate "$dmg"
-          spctl --assess --type execute --verbose=2 "$app_path"
-
-      - name: Create and push the release tag
-        env:
-          RELEASE_TAG: ${{ needs.bump.outputs.tag }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag --annotate "$RELEASE_TAG" --message "Rajio ${RELEASE_TAG}"
-          git push origin "refs/tags/${RELEASE_TAG}"
-
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ needs.bump.outputs.tag }}
-        run: gh release create "$RELEASE_TAG" "$dmg" --generate-notes --title "Rajio ${RELEASE_TAG}" --verify-tag
-
-      - name: Check out Homebrew tap
-        uses: actions/checkout@v6
+      - name: Upload release build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          path: homebrew-tap
-          repository: sichengchen/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-      - name: Update and push Homebrew cask
-        env:
-          RELEASE_VERSION: ${{ needs.bump.outputs.release }}
-        run: |
-          set -euo pipefail
-          sha256="$(shasum --algorithm 256 "$dmg" | awk '{ print $1 }')"
-          node scripts/render-homebrew-cask.mjs "$RELEASE_VERSION" "$sha256" homebrew-tap/Casks/rajio.rb
-          ruby -c homebrew-tap/Casks/rajio.rb
-          git -C homebrew-tap config user.name "github-actions[bot]"
-          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C homebrew-tap add Casks/rajio.rb
-          if ! git -C homebrew-tap diff --cached --quiet; then
-            git -C homebrew-tap commit -m "rajio ${RELEASE_VERSION}"
-            git -C homebrew-tap push origin HEAD:main
-          fi
+          name: macos-release-app-${{ github.run_attempt }}
+          if-no-files-found: error
+          compression-level: 0
+          path: |
+            ${{ runner.temp }}/rajio-release/app.zip
+            ${{ runner.temp }}/rajio-release/release.json
